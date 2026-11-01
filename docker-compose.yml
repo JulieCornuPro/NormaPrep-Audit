@@ -23,13 +23,17 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    env_file: .env
+    env_file:
+      - path: .env
+        required: false
     environment:
       NPA_DATABASE_URL: postgresql+psycopg://npa:${NPA_DB_PASSWORD}@db:5432/npa
       NPA_DOSSIER_CONTENU: /content
     volumes:
       # Référentiels à importer, en lecture seule.
       - ./content:/content:ro
+      # Clés générées au premier démarrage (à sauvegarder : npa afficher-cles).
+      - cles:/var/lib/npa
     ports:
       # Exposé sur la machine locale uniquement ; un proxy TLS se place devant en production.
       - "127.0.0.1:8000:8000"
@@ -41,3 +45,4 @@ services:
 
 volumes:
   donnees-db:
+  cles:

@@ -27,6 +27,36 @@ def generer_cles(_: argparse.Namespace) -> int:
     return 0
 
 
+def preparer_cles(_: argparse.Namespace) -> int:
+    from app.config import preparer_cles as preparer
+
+    print(preparer())
+    return 0
+
+
+def verifier_configuration(_: argparse.Namespace) -> int:
+    from app.securite import ConfigurationInvalide
+    from app.securite import verifier_configuration as verifier
+
+    try:
+        verifier()
+    except ConfigurationInvalide as e:
+        print(f"\nCONFIGURATION INVALIDE : {e}\n", file=sys.stderr)
+        return 1
+    return 0
+
+
+def afficher_cles(_: argparse.Namespace) -> int:
+    """Affiche les clés en usage, pour les sauvegarder hors du serveur."""
+    from app.config import reglages
+
+    r = reglages()
+    print("# À conserver en lieu sûr. Sans NPA_CLE_CHIFFREMENT, les TOTP sont illisibles.")
+    print(f"NPA_SECRET_KEY={r.secret_key}")
+    print(f"NPA_CLE_CHIFFREMENT={r.cle_chiffrement}")
+    return 0
+
+
 def creer_admin(args: argparse.Namespace) -> int:
     from app.config import reglages
     from app.journal import journaliser
@@ -104,6 +134,11 @@ def main(argv: list[str] | None = None) -> int:
     sous = p.add_subparsers(dest="commande", required=True)
 
     sous.add_parser("generer-cles", help="Génère NPA_SECRET_KEY et NPA_CLE_CHIFFREMENT").set_defaults(fn=generer_cles)
+    sous.add_parser("preparer-cles", help="Génère les clés absentes (lancé au démarrage)").set_defaults(fn=preparer_cles)
+    sous.add_parser("verifier-configuration", help="Vérifie les clés (lancé au démarrage)").set_defaults(
+        fn=verifier_configuration
+    )
+    sous.add_parser("afficher-cles", help="Affiche les clés en usage, pour sauvegarde").set_defaults(fn=afficher_cles)
 
     c = sous.add_parser("creer-admin", help="Crée un compte administrateur")
     c.add_argument("--email", required=True)

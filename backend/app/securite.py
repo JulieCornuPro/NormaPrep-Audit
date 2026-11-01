@@ -37,12 +37,18 @@ class ConfigurationInvalide(RuntimeError):
 def verifier_configuration() -> None:
     """Refuse de démarrer avec des clés absentes ou faibles."""
     r = reglages()
+    conseil = (
+        "Corrigez la valeur dans le fichier .env, ou laissez-la vide (« NPA_...= » ou ligne absente) "
+        "pour que l'application la génère au premier démarrage."
+    )
     if len(r.secret_key) < 32:
-        raise ConfigurationInvalide("NPA_SECRET_KEY doit contenir au moins 32 caractères.")
+        raise ConfigurationInvalide(f"NPA_SECRET_KEY est absente ou trop courte (32 caractères minimum). {conseil}")
     try:
         Fernet(r.cle_chiffrement.encode())
     except (ValueError, TypeError) as e:
-        raise ConfigurationInvalide("NPA_CLE_CHIFFREMENT doit être une clé Fernet (générez-la avec : npa generer-cles).") from e
+        raise ConfigurationInvalide(
+            f"NPA_CLE_CHIFFREMENT est absente ou invalide (clé Fernet attendue, ex. générée par « npa generer-cles »). {conseil}"
+        ) from e
 
 
 # ---- mots de passe ----------------------------------------------------------
