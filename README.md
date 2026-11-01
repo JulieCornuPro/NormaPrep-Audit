@@ -61,6 +61,20 @@ Prérequis : Docker et Docker Compose.
    docker compose exec api npa importer-maturite /content/maturite/demo
    ```
 
+### Avec Docker Desktop (Windows ou Mac)
+
+Docker Desktop fournit Docker Compose : les étapes ci-dessus s'appliquent
+telles quelles, à taper dans un terminal (PowerShell sous Windows, Terminal
+sous Mac) ouvert dans le dossier du dépôt cloné. Docker Desktop doit être
+démarré.
+
+Le premier lancement se fait en ligne de commande : Docker Desktop ne sait
+pas créer une stack Compose depuis son interface. Ensuite, la stack apparaît
+dans l'onglet **Containers** sous le nom `normaprep-audit` ; on peut la
+démarrer, l'arrêter et lire les journaux de l'API depuis l'interface. L'onglet
+**Exec** du conteneur `api` permet de lancer les commandes `npa` sans
+terminal.
+
 L'API écoute sur <http://127.0.0.1:8000> (machine locale uniquement) ; la
 documentation interactive est sur <http://127.0.0.1:8000/docs>. En
 production, placer un proxy TLS devant.
