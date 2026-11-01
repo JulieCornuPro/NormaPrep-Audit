@@ -183,7 +183,8 @@ def arbitrer(
     for code, d in decisions.items():
         ligne = existantes.get(code)
         if ligne is None:
-            erreurs.append(f"{code} : réglementation absente de ce diagnostic.")
+            libelle = contenu.reglementations.get(code, {}).get("libelle", code)
+            erreurs.append(f"{libelle} ne ressort plus du profilage (le profil a changé) : rechargez la page.")
             continue
         libelle = contenu.reglementations.get(code, {}).get("libelle", code)
         decision = str(d.get("decision", ligne.decision))
@@ -198,8 +199,13 @@ def arbitrer(
         maj[code] = (decision, justification)
 
     if ajout:
-        if ajout not in contenu.reglementations or ajout in existantes:
-            erreurs.append("Réglementation à ajouter introuvable ou déjà présente.")
+        if ajout not in contenu.reglementations:
+            erreurs.append("Réglementation à ajouter introuvable.")
+        elif ajout in existantes:
+            erreurs.append(
+                f"{contenu.reglementations[ajout]['libelle']} figure déjà dans la liste (le profil l'a fait ressortir) : "
+                "inutile de l'ajouter."
+            )
         elif not justification_ajout.strip():
             erreurs.append(
                 f"{contenu.reglementations[ajout]['libelle']} : une justification est nécessaire pour ajouter une réglementation."

@@ -36,7 +36,7 @@ export default function Profilage({ ctx }: { ctx: ContexteDiagnostic }) {
     <div className="grille-2">
       <div className="carte">
         <h2 style={{ marginTop: 0 }}>Profil de l'organisation</h2>
-        <p className="discret">Ces réponses déterminent les réglementations applicables, la profondeur du questionnaire et les cibles de maturité.</p>
+        <p className="discret">Ces réponses déterminent les réglementations applicables, la profondeur du questionnaire et les cibles de maturité. Chaque réponse est enregistrée immédiatement.</p>
         <Erreur erreur={action.erreur} />
         {v.questions.filter((q) => q.visible).map((q) => (
           <fieldset key={q.code} style={{ border: "none", padding: 0, margin: "16px 0 0" }}>
@@ -69,6 +69,21 @@ function Reglementations({ ctx, vue, miseAJour }: { ctx: ContexteDiagnostic; vue
   const [ajout, setAjout] = useState("");
   const [justificationAjout, setJustificationAjout] = useState("");
   const action = useAction();
+
+  // Le profil vient de changer et le serveur a recalculé la liste : on oublie
+  // les décisions en cours sur des réglementations qui n'y sont plus, et un
+  // ajout prévu qui ressort désormais du calcul (ou n'est plus ajoutable).
+  useEffect(() => {
+    const admises = new Map(vue.reglementations.map((r) => [r.code, r.decisions_admises]));
+    setBrouillons((b) => {
+      const gardes = Object.fromEntries(Object.entries(b).filter(([code, d]) => admises.get(code)?.includes(d.decision)));
+      return Object.keys(gardes).length === Object.keys(b).length ? b : gardes;
+    });
+    if (ajout && !vue.ajoutables.some((a) => a.code === ajout)) {
+      setAjout("");
+      setJustificationAjout("");
+    }
+  }, [vue, ajout]);
 
   const valeur = (l: LigneReglementation) => brouillons[l.code] ?? { decision: l.decision, justification: l.justification };
   const modifier = (l: LigneReglementation, champ: "decision" | "justification", v: string) =>
@@ -132,8 +147,9 @@ function Reglementations({ ctx, vue, miseAJour }: { ctx: ContexteDiagnostic; vue
       )}
       <Erreur erreur={action.erreur} />
       {ctx.saisie && (
-        <p style={{ marginTop: 12 }}>
+        <p className="ligne" style={{ marginTop: 12 }}>
           <button className="principal" disabled={!modifie || action.enCours} onClick={enregistrer}>Enregistrer les décisions</button>
+          <span className="discret">{modifie ? "Décisions modifiées, non enregistrées." : "Rien à enregistrer : la liste reflète le profil."}</span>
         </p>
       )}
     </div>

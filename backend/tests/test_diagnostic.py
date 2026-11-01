@@ -279,3 +279,20 @@ def test_qr_code_a_l_enrolement(client, session):
     creer_utilisateur(session, "nouveau@exemple.fr")
     r = client.post("/api/auth/connexion", json={"email": "nouveau@exemple.fr", "mot_de_passe": MOT_DE_PASSE}).json()
     assert r["qr_svg"].startswith("<svg")
+
+
+def test_messages_quand_le_profil_a_change(client, env):
+    """Décision sur une réglementation qui ne ressort plus, ajout d'une
+    réglementation que le profil fait désormais ressortir : messages clairs."""
+    profiler(client, env, {**PROFIL_PME, "P01": ["finance"]})
+    profiler(client, env, PROFIL_NIS2)  # DORA disparaît, NIS2-EE apparaît
+    r = client.put(
+        f"{env.url}/reglementations",
+        headers=env.h,
+        json={"decisions": {"DORA": {"decision": "ecartee"}}, "ajout": "NIS2-EE", "justification_ajout": "x"},
+    )
+    assert r.status_code == 400
+    assert r.json()["detail"] == [
+        "DORA ne ressort plus du profilage (le profil a changé) : rechargez la page.",
+        "NIS2 : entité essentielle figure déjà dans la liste (le profil l'a fait ressortir) : inutile de l'ajouter.",
+    ]
