@@ -26,51 +26,152 @@ conteneur Docker.
 
 ## Démarrage
 
-Prérequis : Docker et Docker Compose.
+Prérequis : Docker et Docker Compose (fournis par Docker Desktop sous
+Windows et Mac ; Docker Desktop doit être démarré). Les commandes se tapent
+dans un terminal ouvert dans le dossier du dépôt : PowerShell sous Windows,
+Terminal sous Mac ou Linux.
 
-1. Créer le fichier `.env` à partir du modèle, puis y renseigner
-   `NPA_DB_PASSWORD` (mot de passe de la base, à choisir) :
+### 1. Récupérer le code
 
-   ```bash
-   cp .env.example .env
-   ```
+```bash
+git clone https://github.com/JulieCornuPro/NormaPrep-Audit.git
+```
 
-2. Lancer la stack. Au premier démarrage, l'API génère ses clés et les
-   conserve dans un volume Docker ; les migrations s'appliquent ensuite :
+```bash
+cd NormaPrep-Audit
+```
 
-   ```bash
-   docker compose up -d --build
-   ```
+Déjà cloné : `git checkout main` puis `git pull`.
 
-3. Sauvegarder les clés générées, hors du serveur (gestionnaire de mots de
-   passe, coffre) :
+### 2. Créer le fichier `.env`
 
-   ```bash
-   docker compose exec api npa afficher-cles
-   ```
+`.env` n'est **pas** dans le dépôt (il contient un secret) : chacun le crée
+sur sa machine à partir du modèle `.env.example`. Il ne contient qu'une
+information obligatoire, le mot de passe de la base de données, à choisir
+librement. Les clés de l'application, elles, sont générées automatiquement
+au premier démarrage : rien à faire.
 
-4. Créer le premier administrateur (le mot de passe est demandé, 12 caractères minimum) :
+Windows (PowerShell) :
 
-   ```bash
-   docker compose exec api npa creer-admin --email prenom.nom@cabinet.fr --nom "Prénom Nom"
-   ```
+```bash
+Copy-Item .env.example .env
+```
 
-5. Importer le contenu de démonstration, **pivot ANSSI d'abord** :
+```bash
+notepad .env
+```
 
-   ```bash
-   docker compose exec api npa importer-audit /content/referentiels/anssi-hygiene-exemple.json
-   ```
+Mac ou Linux :
 
-   ```bash
-   docker compose exec api npa importer-maturite /content/maturite/demo
-   ```
+```bash
+cp .env.example .env
+```
+
+Dans le fichier, complétez la ligne `NPA_DB_PASSWORD=` avec le mot de passe
+choisi, par exemple `NPA_DB_PASSWORD=Une-phrase-longue-2026`, puis
+enregistrez. Ne touchez pas aux lignes qui commencent par `#`.
+
+À éviter :
+
+- créer le fichier avec `echo ... > .env` dans PowerShell : il serait écrit
+  dans un encodage que Docker ne lit pas ;
+- l'enregistrer sous le nom `.env.txt` : dans le Bloc-notes, choisir le type
+  « Tous les fichiers » ;
+- changer `NPA_DB_PASSWORD` après le premier lancement : la base garde le mot
+  de passe de sa création (voir « Repartir de zéro »).
+
+### 3. Lancer l'application
+
+```bash
+docker compose up -d --build
+```
+
+La première construction prend quelques minutes (elle compile aussi
+l'interface). Vérifiez ensuite que l'API tourne : la dernière ligne doit
+être `Uvicorn running on http://0.0.0.0:8000`.
+
+```bash
+docker compose logs api --tail 10
+```
+
+### 4. Créer le premier administrateur
+
+Le mot de passe est demandé ensuite (12 caractères minimum ; rien ne
+s'affiche pendant la saisie, c'est normal).
+
+```bash
+docker compose exec api npa creer-admin --email prenom.nom@cabinet.fr --nom "Prénom Nom"
+```
+
+### 5. Importer le contenu de démonstration, pivot ANSSI d'abord
+
+```bash
+docker compose exec api npa importer-audit /content/referentiels/anssi-hygiene-exemple.json
+```
+
+```bash
+docker compose exec api npa importer-maturite /content/maturite/demo
+```
+
+Chaque commande doit se terminer par une ligne « … importé : {…} ».
+
+### 6. Sauvegarder les clés générées
+
+À conserver hors du serveur (gestionnaire de mots de passe, coffre) :
+
+```bash
+docker compose exec api npa afficher-cles
+```
+
+### 7. Ouvrir l'application
+
+<http://127.0.0.1:8000> (machine locale uniquement). La documentation de
+l'API est sur <http://127.0.0.1:8000/docs>. En production, placer un proxy
+TLS devant.
+
+### Mettre à jour
+
+```bash
+git pull
+```
+
+```bash
+docker compose up -d --build
+```
+
+La base, les comptes et les référentiels sont conservés.
+
+### Repartir de zéro
+
+Efface la base **et** les clés (toutes les données) ; reprenez ensuite à
+l'étape 3. Dans l'application d'authentification, supprimez l'ancienne
+entrée « NormaPrep Audit » avant de scanner le nouveau QR code.
+
+```bash
+docker compose down -v
+```
+
+### En cas de problème
+
+L'adresse ne répond pas (connexion refusée) : l'API ne tourne pas. Ces deux
+commandes en donnent la raison.
+
+```bash
+docker compose ps
+```
+
+```bash
+docker compose logs api --tail 30
+```
+
+| Message (dans le terminal ou les journaux) | Solution |
+|---|---|
+| `NPA_DB_PASSWORD manquant dans .env` | Créer `.env` (étape 2) |
+| `CONFIGURATION INVALIDE : NPA_SECRET_KEY …` | Supprimer la ligne `NPA_SECRET_KEY=…` de `.env` (clé générée automatiquement) |
+| `password authentication failed for user "npa"` | Le mot de passe de `.env` a changé : remettre l'ancien, ou repartir de zéro |
+| `/bin/sh^M: bad interpreter` | Fichiers convertis par Git sous Windows : supprimer le dossier et cloner à nouveau |
 
 ### Avec Docker Desktop (Windows ou Mac)
-
-Docker Desktop fournit Docker Compose : les étapes ci-dessus s'appliquent
-telles quelles, à taper dans un terminal (PowerShell sous Windows, Terminal
-sous Mac) ouvert dans le dossier du dépôt cloné. Docker Desktop doit être
-démarré.
 
 Le premier lancement se fait en ligne de commande : Docker Desktop ne sait
 pas créer une stack Compose depuis son interface. Ensuite, la stack apparaît
@@ -78,10 +179,6 @@ dans l'onglet **Containers** sous le nom `normaprep-audit` ; on peut la
 démarrer, l'arrêter et lire les journaux de l'API depuis l'interface. L'onglet
 **Exec** du conteneur `api` permet de lancer les commandes `npa` sans
 terminal.
-
-Ouvrez ensuite <http://127.0.0.1:8000> (machine locale uniquement). La
-documentation de l'API est sur <http://127.0.0.1:8000/docs>. En production,
-placer un proxy TLS devant.
 
 ### Première connexion
 
