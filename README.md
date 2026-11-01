@@ -189,6 +189,12 @@ code à 6 chiffres. Les connexions suivantes demandent directement le code.
 
 ## Utilisation
 
+L'interface reprend le thème CARTO de NormaPrep. Le choix **Sombre** (par
+défaut), **Clair** ou **Auto** (suit le réglage de l'ordinateur) se fait en
+bas du menu ; il est mémorisé dans le navigateur. Les polices sont intégrées à
+l'application : aucun appel à un service externe.
+
+
 1. **Missions** : créez une mission (et son client), puis composez l'équipe :
    responsable, consultant, relecteur.
 2. **Diagnostic** : depuis la mission, lancez un diagnostic de maturité. Il

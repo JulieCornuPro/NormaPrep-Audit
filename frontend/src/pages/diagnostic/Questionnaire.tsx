@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { get, put } from "../../api";
 import { Chargement, Erreur, Pastille, useAction, useDonnees } from "../../composants/communs";
-import { dateHeure, interlocuteurs, MODES, nombre, PROFONDEURS } from "../../libelles";
+import { couleurTheme, dateHeure, interlocuteurs, MODES, nombre, PROFONDEURS } from "../../libelles";
 import type { QuestionQ, Questionnaire, ReponseQ } from "../../types";
 import type { ContexteDiagnostic } from "./Diagnostic";
 
@@ -34,7 +34,7 @@ export default function QuestionnairePage({ ctx }: { ctx: ContexteDiagnostic }) 
           const visibles = st.questions.filter(garder);
           if (!visibles.length) return null;
           return (
-            <div key={st.code} className="carte">
+            <div key={st.code} className="carte theme" style={{ "--couleur-theme": couleurTheme(t.couleur) } as CSSProperties}>
               <div className="ligne espace">
                 <h2 style={{ margin: 0 }}>{t.libelle} › {st.code} {st.libelle}</h2>
                 <span className="discret">

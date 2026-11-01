@@ -62,3 +62,11 @@ export const minutes = (m: number) => {
   const r = Math.round(m % 60);
   return h ? `${h} h ${r.toString().padStart(2, "0")}` : `${r} min`;
 };
+
+// Couleur d'un grand thème : le référentiel donne un jeton CSS (« --carto-amber »)
+// ou une couleur hexadécimale. Tout autre valeur est ignorée.
+export const couleurTheme = (couleur: string | null | undefined): string => {
+  if (couleur && /^--[a-z0-9-]+$/i.test(couleur)) return `var(${couleur})`;
+  if (couleur && /^#[0-9a-f]{3,8}$/i.test(couleur)) return couleur;
+  return "var(--accent)";
+};

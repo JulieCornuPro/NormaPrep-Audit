@@ -44,8 +44,9 @@ export default function DiagnosticPage() {
 
   return (
     <>
-      <p className="discret">
-        <Link to="/missions">Missions</Link> › <Link to={`/missions/${s.mission_id}`}>{s.mission_titre}</Link> › Diagnostic n° {s.id}
+      <p className="fil">
+        <Link to="/missions">Missions</Link> › <Link to={`/missions/${s.mission_id}`}>{s.mission_titre}</Link> ›{" "}
+        <span className="courant">Diagnostic n° {s.id}</span>
       </p>
       <div className="ligne espace">
         <div>

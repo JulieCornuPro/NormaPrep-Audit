@@ -7,6 +7,7 @@ interface Axe {
   libelle: string;
   score: number | null;
   cible: number | null;
+  couleur?: string; // couleur du grand thème
 }
 
 const T = 360;
@@ -38,7 +39,7 @@ export default function Radar({ axes }: { axes: Axe[] }) {
           return (
             <g key={a.code}>
               <line x1={C} y1={C} x2={x} y2={y} stroke="var(--bordure)" />
-              <text x={lx} y={ly} fontSize="11" textAnchor="middle" dominantBaseline="middle" fill="var(--texte-2)">{a.code}</text>
+              <text x={lx} y={ly} fontSize="12" fontWeight="700" fontFamily="var(--police-mono)" textAnchor="middle" dominantBaseline="middle" fill={a.couleur ?? "var(--texte-2)"}>{a.code}</text>
             </g>
           );
         })}
@@ -60,7 +61,7 @@ function Barres({ axes }: { axes: Axe[] }) {
       {axes.map((a) => (
         <div key={a.code} style={{ margin: "12px 0" }}>
           <div className="ligne espace">
-            <span>{a.code} · {a.libelle}</span>
+            <span><span className="pastille-theme" style={{ background: a.couleur }} />{a.code} · {a.libelle}</span>
             <span className="discret">{nombre(a.score)} / cible {nombre(a.cible)}</span>
           </div>
           <div style={{ position: "relative", height: 14, background: "var(--surface-2)", borderRadius: 4 }} aria-hidden="true">

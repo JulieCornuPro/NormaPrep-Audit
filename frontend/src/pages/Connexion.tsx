@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { api } from "../api";
 import { Erreur, useAction } from "../composants/communs";
 import { useSession } from "../session";
+import { ChoixTheme } from "../composants/Menu";
 
 interface Etape {
   etape: "totp" | "enrolement";
@@ -40,7 +41,8 @@ export default function Connexion() {
 
   return (
     <div className="page-etroite">
-      <h1>NormaPrep Audit</h1>
+      <p className="marque-connexion">NormaPrep <span>Audit</span></p>
+      <h1>Connexion</h1>
       <div className="carte">
         {!etape && (
           <form onSubmit={envoyerIdentifiants}>
@@ -98,6 +100,7 @@ export default function Connexion() {
           </form>
         )}
       </div>
+      <div style={{ maxWidth: 220 }}><ChoixTheme /></div>
     </div>
   );
 }

@@ -25,7 +25,7 @@ export default function MissionPage() {
 
   return (
     <>
-      <p className="discret"><Link to="/missions">Missions</Link> › {m.client.nom}</p>
+      <p className="fil"><Link to="/missions">Missions</Link> › <span className="courant">{m.client.nom}</span></p>
       <div className="ligne espace">
         <h1>{m.titre}</h1>
         <Pastille texte={STATUTS[m.statut] ?? m.statut} ton={m.statut === "en_cours" ? "accent" : undefined} />
