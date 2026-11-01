@@ -46,6 +46,31 @@ def verifier_configuration(_: argparse.Namespace) -> int:
     return 0
 
 
+def verifier_base(_: argparse.Namespace) -> int:
+    """Vérifie l'accès à la base avant de démarrer, avec un message clair."""
+    from sqlalchemy import text
+    from sqlalchemy.exc import OperationalError
+
+    from app.db import moteur
+
+    try:
+        with moteur().connect() as c:
+            c.execute(text("SELECT 1"))
+    except OperationalError as e:
+        cause = str(e.orig) if e.orig else str(e)
+        if "password authentication failed" in cause:
+            message = (
+                "la base refuse le mot de passe. Elle garde celui qu'elle avait à sa création : "
+                "remettez cet ancien mot de passe dans NPA_DB_PASSWORD (.env), ou repartez de zéro "
+                "avec « docker compose down -v » (efface toutes les données)."
+            )
+        else:
+            message = f"base de données injoignable ({cause.strip().splitlines()[0]})."
+        print(f"\nCONNEXION À LA BASE IMPOSSIBLE : {message}\n", file=sys.stderr)
+        return 1
+    return 0
+
+
 def afficher_cles(_: argparse.Namespace) -> int:
     """Affiche les clés en usage, pour les sauvegarder hors du serveur."""
     from app.config import reglages
@@ -138,6 +163,7 @@ def main(argv: list[str] | None = None) -> int:
     sous.add_parser("verifier-configuration", help="Vérifie les clés (lancé au démarrage)").set_defaults(
         fn=verifier_configuration
     )
+    sous.add_parser("verifier-base", help="Vérifie l'accès à la base (lancé au démarrage)").set_defaults(fn=verifier_base)
     sous.add_parser("afficher-cles", help="Affiche les clés en usage, pour sauvegarde").set_defaults(fn=afficher_cles)
 
     c = sous.add_parser("creer-admin", help="Crée un compte administrateur")

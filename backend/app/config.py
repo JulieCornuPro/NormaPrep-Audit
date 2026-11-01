@@ -14,6 +14,7 @@ from pathlib import Path
 
 from cryptography.fernet import Fernet
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import URL
 
 CLES = ("secret_key", "cle_chiffrement")
 
@@ -21,8 +22,16 @@ CLES = ("secret_key", "cle_chiffrement")
 class Reglages(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="NPA_", env_file=".env", extra="ignore")
 
-    # Base de données (SQLAlchemy + psycopg 3).
-    database_url: str = "postgresql+psycopg://npa:npa@localhost:5432/npa"
+    # Base de données. Soit une URL complète (NPA_DATABASE_URL), soit ses
+    # éléments séparés : c'est le cas sous Docker, où le mot de passe vient de
+    # NPA_DB_PASSWORD. L'URL est alors construite ici, caractères spéciaux
+    # du mot de passe échappés (un « % » ou un « @ » cassait l'URL).
+    database_url: str = ""
+    db_hote: str = "localhost"
+    db_port: int = 5432
+    db_utilisateur: str = "npa"
+    db_nom: str = "npa"
+    db_password: str = "npa"
 
     # Signature des jetons d'accès.
     secret_key: str = ""
@@ -51,6 +60,19 @@ class Reglages(BaseSettings):
     duree_blocage_minutes: int = 15
 
     longueur_min_mot_de_passe: int = 12
+
+
+def url_base(r: "Reglages") -> URL | str:
+    if r.database_url:
+        return r.database_url
+    return URL.create(
+        "postgresql+psycopg",
+        username=r.db_utilisateur,
+        password=r.db_password,
+        host=r.db_hote,
+        port=r.db_port,
+        database=r.db_nom,
+    )
 
 
 def _lire_fichier_cles(fichier: Path) -> dict[str, str]:
