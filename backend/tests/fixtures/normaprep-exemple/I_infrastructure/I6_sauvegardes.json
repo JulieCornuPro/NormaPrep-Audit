@@ -1,0 +1,36 @@
+{
+  "sous_theme": {
+    "code": "I6",
+    "theme": "I",
+    "libelle": "Sauvegardes et restauration",
+    "ordre": 6
+  },
+  "questions": [
+    {
+      "ref": "I6-Q01",
+      "enonce": "Comment les données et systèmes sont-ils sauvegardés ?",
+      "profondeur": "essentiel",
+      "references": [
+        "ISO 27002 8.13",
+        "ANSSI mesure 37"
+      ],
+      "niveaux": {
+        "0": "Aucune sauvegarde",
+        "1": "Sauvegardes ponctuelles et manuelles",
+        "2": "Sauvegardes automatisées des systèmes principaux",
+        "3": "Automatisées, avec au moins une copie hors ligne ou immuable",
+        "4": "Restaurations testées régulièrement, résultats consignés",
+        "5": "Testées, supervisées, RPO/RTO définis et intégrés au plan de continuité"
+      },
+      "recommandations": [
+        {
+          "ref": "I6-Q01-R1",
+          "texte": "Mettre en place une copie de sauvegarde hors ligne ou immuable.",
+          "seuil": 3,
+          "effort": "moyen",
+          "quick_win": true
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "sous_theme": {
+    "code": "G3",
+    "theme": "G",
+    "libelle": "Gestion des risques",
+    "ordre": 3
+  },
+  "questions": [
+    {
+      "ref": "G3-Q01",
+      "enonce": "Comment l'organisation analyse-t-elle ses risques de sécurité ?",
+      "aide": "Demander le dernier rapport d'analyse et le plan de traitement.",
+      "profondeur": "essentiel",
+      "references": [
+        "ISO 27001 §6.1",
+        "ISO 27001 §8.2",
+        "NIST CSF GV.RM"
+      ],
+      "niveaux": {
+        "0": "Aucune analyse de risques n'a été réalisée",
+        "1": "Risques identifiés de manière informelle, au cas par cas",
+        "2": "Analyse réalisée une fois, sans méthode reconnue ni mise à jour",
+        "3": "Analyse selon une méthode reconnue, documentée, avec plan de traitement",
+        "4": "Mise à jour au moins annuelle et à chaque changement majeur ; plan suivi",
+        "5": "Intégrée aux projets et décisions métier ; indicateurs suivis par la direction"
+      },
+      "recommandations": [
+        {
+          "ref": "G3-Q01-R1",
+          "texte": "Conduire une analyse de risques selon une méthode reconnue et formaliser le plan de traitement.",
+          "seuil": 3,
+          "effort": "moyen",
+          "quick_win": false,
+          "prestation": "EBIOS-RM"
+        }
+      ]
+    },
+    {
+      "ref": "G3-Q02",
+      "enonce": "Les risques résiduels sont-ils acceptés formellement par la direction ?",
+      "profondeur": "renforce",
+      "references": [
+        "ISO 27001 §6.1.3 f"
+      ],
+      "niveaux": {
+        "0": "Aucune acceptation",
+        "1": "Acceptation orale",
+        "2": "Acceptation ponctuelle par écrit",
+        "3": "Acceptation formelle documentée",
+        "4": "Revue périodique des risques acceptés",
+        "5": "Seuils d'acceptation définis et suivis en comité"
+      }
+    }
+  ],
+  "recommandations": [
+    {
+      "ref": "G3-R1",
+      "texte": "Désigner un responsable de la gestion des risques.",
+      "seuil": 2,
+      "effort": "faible",
+      "quick_win": true
+    }
+  ]
+}

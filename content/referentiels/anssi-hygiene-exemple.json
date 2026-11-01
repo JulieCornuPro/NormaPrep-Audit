@@ -1,0 +1,98 @@
+{
+  "code": "ANSSI-HYG",
+  "version": "exemple-0.1",
+  "libelle": "Guide d'hygiène informatique de l'ANSSI — EXEMPLE PARTIEL (5 mesures sur 42), à compléter depuis le guide officiel",
+  "source": "ANSSI, Guide d'hygiène informatique, version 2017. Intitulés à vérifier mot pour mot sur le document officiel ; points de contrôle rédigés pour l'exemple.",
+  "licence": "Licence Ouverte / Open Licence (Etalab) — citer la source.",
+  "niveaux": ["standard", "renforce"],
+  "sections": [
+    {
+      "code": "S01",
+      "libelle": "Sensibiliser et former",
+      "exigences": [
+        {
+          "code": "1",
+          "libelle": "Former les équipes opérationnelles à la sécurité des systèmes d'information",
+          "controles": [
+            {
+              "code": "1.a",
+              "intitule": "Les équipes opérationnelles ont suivi une formation à la sécurité des SI au cours des 12 derniers mois",
+              "niveau": "standard",
+              "methode": "revue_documentaire",
+              "preuves_attendues": ["Plan de formation", "Feuilles de présence"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "S02",
+      "libelle": "Connaître le système d'information",
+      "exigences": [
+        {
+          "code": "4",
+          "libelle": "Identifier les informations et serveurs les plus sensibles et maintenir un schéma du réseau"
+        }
+      ]
+    },
+    {
+      "code": "S03",
+      "libelle": "Authentifier et contrôler les accès",
+      "exigences": [
+        {
+          "code": "7",
+          "libelle": "Identifier nommément chaque personne ayant accès au système et distinguer les rôles utilisateur et administrateur"
+        }
+      ]
+    },
+    { "code": "S04", "libelle": "Sécuriser les postes" },
+    { "code": "S05", "libelle": "Sécuriser le réseau" },
+    { "code": "S06", "libelle": "Sécuriser l'administration" },
+    { "code": "S07", "libelle": "Gérer le nomadisme" },
+    {
+      "code": "S08",
+      "libelle": "Maintenir le système d'information à jour",
+      "exigences": [
+        {
+          "code": "34",
+          "libelle": "Définir une politique de mise à jour des composants du système d'information"
+        }
+      ]
+    },
+    {
+      "code": "S09",
+      "libelle": "Superviser, auditer, réagir",
+      "exigences": [
+        {
+          "code": "37",
+          "libelle": "Définir et appliquer une politique de sauvegarde des composants critiques",
+          "controles": [
+            {
+              "code": "37.a",
+              "intitule": "Une politique de sauvegarde écrite définit le périmètre, la fréquence et la durée de conservation",
+              "niveau": "standard",
+              "methode": "revue_documentaire",
+              "preuves_attendues": ["Politique de sauvegarde"],
+              "recommandation": "Rédiger et faire valider une politique de sauvegarde couvrant les composants critiques."
+            },
+            {
+              "code": "37.b",
+              "intitule": "Au moins une copie des sauvegardes est conservée hors ligne ou de façon immuable",
+              "niveau": "standard",
+              "methode": "observation",
+              "preuves_attendues": ["Capture de la console de sauvegarde"]
+            },
+            {
+              "code": "37.c",
+              "intitule": "Des tests de restauration sont réalisés et leurs résultats consignés",
+              "niveau": "renforce",
+              "methode": "revue_documentaire",
+              "preuves_attendues": ["Procès-verbal du dernier test de restauration"]
+            }
+          ]
+        }
+      ]
+    },
+    { "code": "S10", "libelle": "Pour aller plus loin" }
+  ]
+}

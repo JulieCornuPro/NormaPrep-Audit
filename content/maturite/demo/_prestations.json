@@ -1,0 +1,19 @@
+{
+  "prestations": [
+    {
+      "code": "EBIOS-RM",
+      "libelle": "Analyse de risques EBIOS RM",
+      "description": "",
+      "lien": ""
+    },
+    {
+      "code": "AUDIT-ANSSI",
+      "libelle": "Audit de conformité au guide d'hygiène ANSSI",
+      "description": "Audit ciblé sur les sections du guide concernées par les écarts constatés.",
+      "referentiel_audit": "ANSSI-HYG",
+      "sections": [
+        "S09"
+      ]
+    }
+  ]
+}

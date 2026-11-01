@@ -1,0 +1,24 @@
+{
+  "version": "exemple-0.1",
+  "libelle": "Référentiel d'exemple (tests)",
+  "themes": [
+    {
+      "code": "G",
+      "libelle": "Gouvernance",
+      "couleur": "--carto-amber",
+      "ordre": 1
+    },
+    {
+      "code": "I",
+      "libelle": "Infrastructure",
+      "couleur": "--carto-teal",
+      "ordre": 2
+    },
+    {
+      "code": "A",
+      "libelle": "Applicatif",
+      "couleur": "--carto-orange-lt",
+      "ordre": 3
+    }
+  ]
+}

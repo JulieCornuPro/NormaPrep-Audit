@@ -1,0 +1,43 @@
+# NormaPrep Audit — API + PostgreSQL.
+# Démarrage : voir README.md (fichier .env obligatoire).
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: npa
+      POSTGRES_USER: npa
+      POSTGRES_PASSWORD: ${NPA_DB_PASSWORD:?NPA_DB_PASSWORD manquant dans .env}
+    volumes:
+      - donnees-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U npa -d npa"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      NPA_DATABASE_URL: postgresql+psycopg://npa:${NPA_DB_PASSWORD}@db:5432/npa
+      NPA_DOSSIER_CONTENU: /content
+    volumes:
+      # Référentiels à importer, en lecture seule.
+      - ./content:/content:ro
+    ports:
+      # Exposé sur la machine locale uniquement ; un proxy TLS se place devant en production.
+      - "127.0.0.1:8000:8000"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  donnees-db:

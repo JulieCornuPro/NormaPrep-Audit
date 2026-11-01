@@ -1,0 +1,176 @@
+{
+  "reglementations": [
+    {
+      "code": "SOCLE",
+      "libelle": "Socle d'hygiène (guide ANSSI)",
+      "nature": "referentiel",
+      "regles": [
+        {
+          "ref": "R1",
+          "niveau": "obligatoire",
+          "critere": "S'applique à toute organisation.",
+          "conditions": {
+            "toujours": true
+          }
+        }
+      ],
+      "exigences": {
+        "G3": {
+          "profondeur": "essentiel",
+          "cible": 2
+        },
+        "I6": {
+          "profondeur": "essentiel",
+          "cible": 2
+        },
+        "A4": {
+          "profondeur": "essentiel",
+          "cible": 2
+        }
+      }
+    },
+    {
+      "code": "NIS2-EE",
+      "libelle": "NIS2 : entité essentielle",
+      "nature": "legale",
+      "echeance": "Transposition française en cours",
+      "actions": [
+        "Gouvernance cyber au niveau de la direction",
+        "Gestion des risques",
+        "Signalement des incidents"
+      ],
+      "regles": [
+        {
+          "ref": "R1",
+          "niveau": "obligatoire",
+          "critere": "Secteur de l'annexe I et taille ETI ou grande entreprise.",
+          "conditions": {
+            "tous": [
+              {
+                "P01": [
+                  "energie",
+                  "finance"
+                ]
+              },
+              {
+                "P02": [
+                  "eti",
+                  "ge"
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "ref": "R2",
+          "niveau": "obligatoire",
+          "critere": "Activité visée quelle que soit la taille.",
+          "conditions": {
+            "P14": [
+              "confiance_qualifie",
+              "dns"
+            ]
+          }
+        },
+        {
+          "ref": "R3",
+          "niveau": "obligatoire",
+          "critere": "Désignée par une autorité.",
+          "conditions": {
+            "P15": [
+              "oui"
+            ]
+          }
+        },
+        {
+          "ref": "R4",
+          "niveau": "a_verifier",
+          "critere": "Désignation par une autorité inconnue du client : à confirmer.",
+          "conditions": {
+            "P15": [
+              "ne_sait_pas"
+            ]
+          }
+        }
+      ],
+      "exigences": {
+        "G3": {
+          "profondeur": "renforce",
+          "cible": 4
+        },
+        "I6": {
+          "profondeur": "standard",
+          "cible": 3
+        }
+      }
+    },
+    {
+      "code": "DORA",
+      "libelle": "DORA",
+      "nature": "legale",
+      "echeance": "Applicable depuis le 17 janvier 2025",
+      "regles": [
+        {
+          "ref": "R1",
+          "niveau": "obligatoire",
+          "critere": "Établissement financier ou prestataire IT du secteur financier.",
+          "conditions": {
+            "un_parmi": [
+              {
+                "P01": [
+                  "finance"
+                ]
+              },
+              {
+                "P06": [
+                  "etablissement",
+                  "prestataire"
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "exigences": {
+        "G3": {
+          "profondeur": "renforce",
+          "cible": 4
+        },
+        "I6": {
+          "profondeur": "renforce",
+          "cible": 4
+        }
+      }
+    },
+    {
+      "code": "ISO27001",
+      "libelle": "ISO/IEC 27001",
+      "nature": "referentiel",
+      "description": "Système de management de la sécurité de l'information, certifiable.",
+      "regles": [
+        {
+          "ref": "R1",
+          "niveau": "recommande",
+          "critere": "Référence internationale, attendue par les clients et partenaires.",
+          "conditions": {
+            "toujours": true
+          }
+        }
+      ],
+      "exigences": {
+        "G3": {
+          "profondeur": "standard",
+          "cible": 3
+        },
+        "I6": {
+          "profondeur": "standard",
+          "cible": 3
+        },
+        "A4": {
+          "profondeur": "standard",
+          "cible": 3
+        }
+      }
+    }
+  ]
+}

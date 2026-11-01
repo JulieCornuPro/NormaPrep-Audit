@@ -1,0 +1,115 @@
+{
+  "questions": [
+    {
+      "code": "P01",
+      "libelle": "Secteur d'activité principal",
+      "type": "choix_unique",
+      "choix": [
+        {
+          "code": "energie",
+          "libelle": "Énergie"
+        },
+        {
+          "code": "finance",
+          "libelle": "Banque / Finance"
+        },
+        {
+          "code": "services_num",
+          "libelle": "Services numériques"
+        },
+        {
+          "code": "autre",
+          "libelle": "Autre secteur"
+        }
+      ]
+    },
+    {
+      "code": "P02",
+      "libelle": "Taille de l'organisation",
+      "type": "choix_unique",
+      "choix": [
+        {
+          "code": "tpe",
+          "libelle": "TPE"
+        },
+        {
+          "code": "pme",
+          "libelle": "PME"
+        },
+        {
+          "code": "eti",
+          "libelle": "ETI"
+        },
+        {
+          "code": "ge",
+          "libelle": "Grande entreprise"
+        }
+      ]
+    },
+    {
+      "code": "P06",
+      "libelle": "Lien avec le secteur financier",
+      "type": "choix_unique",
+      "choix": [
+        {
+          "code": "aucun",
+          "libelle": "Aucun"
+        },
+        {
+          "code": "etablissement",
+          "libelle": "Établissement financier"
+        },
+        {
+          "code": "prestataire",
+          "libelle": "Prestataire IT pour la finance"
+        }
+      ]
+    },
+    {
+      "code": "P14",
+      "libelle": "Activités visées par NIS2 quelle que soit la taille",
+      "type": "choix_multiple",
+      "choix": [
+        {
+          "code": "confiance_qualifie",
+          "libelle": "Services de confiance qualifiés"
+        },
+        {
+          "code": "dns",
+          "libelle": "Services DNS"
+        },
+        {
+          "code": "aucune",
+          "libelle": "Aucune"
+        }
+      ]
+    },
+    {
+      "code": "P15",
+      "libelle": "L'organisation a-t-elle été désignée par une autorité (entité critique, entité désignée NIS2) ?",
+      "aide": "Question posée seulement si le secteur est concerné par NIS2.",
+      "type": "choix_unique",
+      "condition": {
+        "non": {
+          "P01": [
+            "autre"
+          ]
+        }
+      },
+      "choix": [
+        {
+          "code": "oui",
+          "libelle": "Oui"
+        },
+        {
+          "code": "non",
+          "libelle": "Non"
+        },
+        {
+          "code": "ne_sait_pas",
+          "libelle": "Ne sait pas"
+        }
+      ]
+    }
+  ]
+}

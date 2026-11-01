@@ -1,0 +1,24 @@
+{
+  "version": "demo-0.2",
+  "libelle": "Référentiel de démonstration (repris de NormaPrep Diagnostic demo-0.1), à remplacer par le pipeline de contenu",
+  "themes": [
+    {
+      "code": "G",
+      "libelle": "Gouvernance",
+      "couleur": "--carto-amber",
+      "ordre": 1
+    },
+    {
+      "code": "I",
+      "libelle": "Infrastructure",
+      "couleur": "--carto-teal",
+      "ordre": 2
+    },
+    {
+      "code": "A",
+      "libelle": "Applicatif",
+      "couleur": "--carto-orange-lt",
+      "ordre": 3
+    }
+  ]
+}
