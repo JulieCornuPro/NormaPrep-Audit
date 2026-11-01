@@ -5,7 +5,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-RUN useradd --create-home --uid 1000 npa
+RUN useradd --create-home --uid 1000 npa \
+    && mkdir -p /var/lib/npa && chown npa:npa /var/lib/npa && chmod 700 /var/lib/npa
 WORKDIR /app
 
 COPY pyproject.toml ./

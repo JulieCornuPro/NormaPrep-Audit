@@ -26,23 +26,25 @@ conteneur Docker.
 
 Prérequis : Docker et Docker Compose.
 
-1. Créer le fichier `.env` à partir du modèle :
+1. Créer le fichier `.env` à partir du modèle, puis y renseigner
+   `NPA_DB_PASSWORD` (mot de passe de la base, à choisir) :
 
    ```bash
    cp .env.example .env
    ```
 
-2. Dans `.env`, choisir un mot de passe pour la base (`NPA_DB_PASSWORD`),
-   puis générer les deux clés et copier les lignes affichées dans `.env` :
-
-   ```bash
-   docker compose run --rm --no-deps --entrypoint npa api generer-cles
-   ```
-
-3. Lancer la stack (les migrations s'appliquent au démarrage de l'API) :
+2. Lancer la stack. Au premier démarrage, l'API génère ses clés et les
+   conserve dans un volume Docker ; les migrations s'appliquent ensuite :
 
    ```bash
    docker compose up -d --build
+   ```
+
+3. Sauvegarder les clés générées, hors du serveur (gestionnaire de mots de
+   passe, coffre) :
+
+   ```bash
+   docker compose exec api npa afficher-cles
    ```
 
 4. Créer le premier administrateur (le mot de passe est demandé, 12 caractères minimum) :
@@ -96,7 +98,8 @@ Dans le conteneur : `docker compose exec api npa <commande>`.
 
 | Commande | Rôle |
 |---|---|
-| `generer-cles` | Génère `NPA_SECRET_KEY` et `NPA_CLE_CHIFFREMENT` |
+| `afficher-cles` | Affiche les clés en usage, pour les sauvegarder |
+| `generer-cles` | Génère deux clés, pour qui préfère les fournir dans `.env` |
 | `creer-admin --email … --nom …` | Crée un administrateur |
 | `importer-audit <fichier.json>` | Importe un référentiel d'audit |
 | `importer-maturite <dossier>` | Importe un référentiel de maturité |
@@ -133,8 +136,10 @@ l'utilise).
 - Conteneur API en système de fichiers en lecture seule, utilisateur non root,
   port exposé sur `127.0.0.1` uniquement.
 
-**Conservez `NPA_CLE_CHIFFREMENT`** avec vos sauvegardes : sans elle, les
-secrets TOTP sont illisibles et chaque compte doit refaire l'enrôlement.
+**Conservez les clés** (`npa afficher-cles`) avec vos sauvegardes : sans
+`NPA_CLE_CHIFFREMENT`, les secrets TOTP sont illisibles et chaque compte doit
+refaire l'enrôlement. Elles vivent dans le volume Docker `cles` : un
+`docker compose down -v` les efface, comme la base.
 
 ## Développement
 
