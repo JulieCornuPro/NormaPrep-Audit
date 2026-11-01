@@ -25,6 +25,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -71,6 +72,7 @@ class EntreeJournal(Base):
     suppression (voir la migration initiale)."""
 
     __tablename__ = "journal"
+    __table_args__ = (Index("ix_journal_action", "action"), Index("ix_journal_utilisateur", "utilisateur_id"))
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     horodatage: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -307,7 +309,10 @@ class Correspondance(Base):
     appliquée. Nuls = règle par défaut de l'outil."""
 
     __tablename__ = "correspondance"
-    __table_args__ = (UniqueConstraint("referentiel_id", "source_type", "source_code", "cible_referentiel", "cible_code"),)
+    __table_args__ = (
+        UniqueConstraint("referentiel_id", "source_type", "source_code", "cible_referentiel", "cible_code"),
+        Index("ix_correspondance_cible", "cible_referentiel", "cible_code"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     referentiel_id: Mapped[int] = mapped_column(ForeignKey("referentiel.id", ondelete="CASCADE"))
@@ -317,3 +322,138 @@ class Correspondance(Base):
     cible_code: Mapped[str] = mapped_column(String(50))
     seuil_applique: Mapped[int | None] = mapped_column(Integer, default=None)
     seuil_partiel: Mapped[int | None] = mapped_column(Integer, default=None)
+
+
+# ---------------------------------------------------------------------------
+# Clients, missions et diagnostics (jalon 2)
+# ---------------------------------------------------------------------------
+
+ROLE_RESPONSABLE = "responsable"
+ROLE_CONSULTANT = "consultant"
+ROLE_RELECTEUR = "relecteur"
+ROLES_MISSION = (ROLE_RESPONSABLE, ROLE_CONSULTANT, ROLE_RELECTEUR)
+
+
+class Client(Base):
+    __tablename__ = "client"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # Nom réel ou pseudonyme : le cabinet choisit ce qu'il conserve.
+    nom: Mapped[str] = mapped_column(String(200))
+    secteur: Mapped[str] = mapped_column(String(200), default="")
+    notes: Mapped[str] = mapped_column(Text, default="")
+    cree_le: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    cree_par: Mapped[int | None] = mapped_column(ForeignKey("utilisateur.id"), default=None)
+
+
+class Mission(Base):
+    __tablename__ = "mission"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    client_id: Mapped[int] = mapped_column(ForeignKey("client.id"))
+    titre: Mapped[str] = mapped_column(String(300))
+    perimetre: Mapped[str] = mapped_column(Text, default="")
+    statut: Mapped[str] = mapped_column(String(20), default="en_cours")  # en_cours | terminee
+    cree_le: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    cree_par: Mapped[int | None] = mapped_column(ForeignKey("utilisateur.id"), default=None)
+
+    client: Mapped[Client] = relationship()
+    membres: Mapped[list["MembreMission"]] = relationship(back_populates="mission", cascade="all, delete-orphan")
+
+
+class MembreMission(Base):
+    """Rôle d'un utilisateur sur une mission. Un administrateur voit toutes
+    les missions sans en être membre."""
+
+    __tablename__ = "membre_mission"
+    __table_args__ = (UniqueConstraint("mission_id", "utilisateur_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    mission_id: Mapped[int] = mapped_column(ForeignKey("mission.id", ondelete="CASCADE"))
+    utilisateur_id: Mapped[int] = mapped_column(ForeignKey("utilisateur.id"))
+    role: Mapped[str] = mapped_column(String(20))
+
+    mission: Mapped[Mission] = relationship(back_populates="membres")
+    utilisateur: Mapped[Utilisateur] = relationship()
+
+
+class Diagnostic(Base):
+    """Diagnostic de maturité d'une mission, mené sur une version figée du
+    référentiel de maturité."""
+
+    __tablename__ = "diagnostic"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    mission_id: Mapped[int] = mapped_column(ForeignKey("mission.id", ondelete="CASCADE"))
+    referentiel_id: Mapped[int] = mapped_column(ForeignKey("referentiel.id"))
+    statut: Mapped[str] = mapped_column(String(20), default="en_cours")  # en_cours | finalise
+    # Réponses de profilage : {"P01": ["energie"], ...}
+    profil: Mapped[dict[str, list[str]]] = mapped_column(JSON, default=dict)
+    # Mode de recueil modifié par le consultant : {"G3-Q01": "pre_questionnaire"}
+    modes: Mapped[dict[str, str]] = mapped_column(JSON, default=dict)
+    budget_atelier_minutes: Mapped[int] = mapped_column(Integer, default=120)
+    ouverture_minutes: Mapped[int] = mapped_column(Integer, default=15)
+    # Résultats figés à la finalisation (scores, cibles, recommandations).
+    resultats_figes: Mapped[dict[str, Any] | None] = mapped_column(JSON, default=None)
+    cree_le: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    cree_par: Mapped[int | None] = mapped_column(ForeignKey("utilisateur.id"), default=None)
+    finalise_le: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+    mission: Mapped[Mission] = relationship()
+    referentiel: Mapped[Referentiel] = relationship()
+
+
+class DiagReglementation(Base):
+    """Réglementation proposée par le profilage ou ajoutée par le consultant,
+    avec la décision prise (reprise de NormaPrep)."""
+
+    __tablename__ = "diag_reglementation"
+    __table_args__ = (UniqueConstraint("diagnostic_id", "reglementation_code"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    diagnostic_id: Mapped[int] = mapped_column(ForeignKey("diagnostic.id", ondelete="CASCADE"))
+    reglementation_code: Mapped[str] = mapped_column(String(30))
+    niveau_calcule: Mapped[str] = mapped_column(String(20))  # obligatoire | a_verifier | recommande
+    decision: Mapped[str] = mapped_column(String(20))  # retenue | ecartee | en_attente
+    origine: Mapped[str] = mapped_column(String(10))  # calcul | forcage
+    critere: Mapped[str] = mapped_column(Text, default="")
+    justification: Mapped[str] = mapped_column(Text, default="")
+
+
+class Reponse(Base):
+    """Réponse à une question de maturité. Le niveau retenu est celui du
+    consultant ; la proposition du client (pré-questionnaire) est gardée à
+    part jusqu'à ce que le consultant la valide."""
+
+    __tablename__ = "reponse"
+    __table_args__ = (UniqueConstraint("diagnostic_id", "question_ref"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    diagnostic_id: Mapped[int] = mapped_column(ForeignKey("diagnostic.id", ondelete="CASCADE"))
+    question_ref: Mapped[str] = mapped_column(String(30))
+    niveau: Mapped[int | None] = mapped_column(Integer, default=None)
+    non_applicable: Mapped[bool] = mapped_column(Boolean, default=False)
+    commentaire: Mapped[str] = mapped_column(Text, default="")
+    saisi_par: Mapped[int | None] = mapped_column(ForeignKey("utilisateur.id"), default=None)
+    saisi_le: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+    niveau_propose: Mapped[int | None] = mapped_column(Integer, default=None)
+    commentaire_client: Mapped[str] = mapped_column(Text, default="")
+    propose_le: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+
+class LienPreQuestionnaire(Base):
+    """Lien envoyé au client pour le pré-questionnaire. Seule l'empreinte
+    SHA-256 du jeton est conservée."""
+
+    __tablename__ = "lien_pre_questionnaire"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    diagnostic_id: Mapped[int] = mapped_column(ForeignKey("diagnostic.id", ondelete="CASCADE"))
+    empreinte_jeton: Mapped[str] = mapped_column(String(64), unique=True)
+    destinataire: Mapped[str] = mapped_column(String(200), default="")
+    expire_le: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    revoque: Mapped[bool] = mapped_column(Boolean, default=False)
+    cree_le: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    cree_par: Mapped[int | None] = mapped_column(ForeignKey("utilisateur.id"), default=None)
+    derniere_utilisation: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)

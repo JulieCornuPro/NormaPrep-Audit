@@ -5,9 +5,11 @@ renvoie le secret et l'URI à scanner dans une application d'authentification,
 et la seconde étape active le TOTP en vérifiant un premier code.
 """
 
+import io
 from datetime import UTC, datetime, timedelta
 from typing import Literal
 
+import segno
 from fastapi import APIRouter, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlalchemy import func, select
@@ -48,6 +50,8 @@ class EtapeTotp(BaseModel):
     # Présents à l'enrôlement seulement.
     secret: str | None = None
     uri_totp: str | None = None
+    # QR code de l'URI, en SVG, à afficher pour l'application d'authentification.
+    qr_svg: str | None = None
 
 
 class CodeTotp(BaseModel):
@@ -124,7 +128,15 @@ def connexion(donnees: Connexion, s: SessionDep, request: Request) -> EtapeTotp:
         u.totp_secret_chiffre = chiffrer(nouveau_secret_totp())
     s.commit()
     secret = dechiffrer(u.totp_secret_chiffre)
-    return EtapeTotp(etape="enrolement", jeton=jeton, secret=secret, uri_totp=uri_totp(secret, u.email))
+    uri = uri_totp(secret, u.email)
+    return EtapeTotp(etape="enrolement", jeton=jeton, secret=secret, uri_totp=uri, qr_svg=qr_svg(uri))
+
+
+def qr_svg(texte: str) -> str:
+    """QR code en SVG, généré localement (aucun service externe)."""
+    tampon = io.BytesIO()
+    segno.make(texte, error="m").save(tampon, kind="svg", scale=5, border=2, xmldecl=False, svgns=True)
+    return tampon.getvalue().decode()
 
 
 @router.post("/totp", response_model=JetonAcces)

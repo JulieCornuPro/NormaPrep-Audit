@@ -8,19 +8,21 @@ conteneur Docker.
 - Cahier des charges : [docs/cahier-des-charges.md](docs/cahier-des-charges.md)
 - Format des référentiels : [docs/format-contenu.md](docs/format-contenu.md)
 
-## État : jalon 1 (socle)
+## État : jalons 1 et 2
 
 | Fonction | État |
 |---|---|
-| Stack Docker (API + PostgreSQL), migrations automatiques au démarrage | fait |
-| Comptes, connexion mot de passe + TOTP obligatoire, blocage après 5 échecs | fait |
-| Gestion des comptes par un administrateur | fait |
-| Import des référentiels de maturité (format NormaPrep) et d'audit (Section > Exigence > Contrôle) | fait |
-| Versions figées des référentiels | fait |
-| Correspondances vers le pivot ANSSI, avec seuils ; rapport de couverture | fait |
-| Journal d'audit inaltérable (protégé au niveau de la base) | fait |
-| Interface web | jalon 2 ; en attendant, l'API se pilote depuis `/docs` |
-| Stockage des preuves (MinIO) | jalon 3, avec les preuves |
+| Stack Docker (API, interface web, PostgreSQL), clés et migrations automatiques | fait |
+| Comptes, connexion mot de passe + TOTP (QR code), blocage après 5 échecs | fait |
+| Import des référentiels, versions figées, correspondances ANSSI, couverture | fait |
+| Journal d'audit inaltérable | fait |
+| Clients, missions, équipe et rôles par mission | fait |
+| Diagnostic : profilage réglementaire, arbitrage, profondeur et cibles | fait |
+| Plan d'ateliers automatique (budget, interlocuteurs, modes de recueil) | fait |
+| Questionnaire à niveaux, pré-questionnaire client par lien | fait |
+| Résultats : scores, écarts, radar, recommandations, audits proposés, finalisation | fait |
+| Audits (socle EBIOS RM, conformité ANSSI, configuration CIS), preuves | jalon 3 |
+| Rapports DOCX / PDF | jalon 4 |
 
 ## Démarrage
 
@@ -77,20 +79,44 @@ démarrer, l'arrêter et lire les journaux de l'API depuis l'interface. L'onglet
 **Exec** du conteneur `api` permet de lancer les commandes `npa` sans
 terminal.
 
-L'API écoute sur <http://127.0.0.1:8000> (machine locale uniquement) ; la
-documentation interactive est sur <http://127.0.0.1:8000/docs>. En
-production, placer un proxy TLS devant.
+Ouvrez ensuite <http://127.0.0.1:8000> (machine locale uniquement). La
+documentation de l'API est sur <http://127.0.0.1:8000/docs>. En production,
+placer un proxy TLS devant.
 
 ### Première connexion
 
-1. `POST /api/auth/connexion` avec l'email et le mot de passe. La réponse
-   contient `etape: "enrolement"`, un `secret` et une `uri_totp` : ajoutez le
-   compte dans une application d'authentification (scan du QR code de
-   l'URI, ou saisie du secret).
-2. `POST /api/auth/totp` avec le `jeton` reçu et le code à 6 chiffres. La
-   réponse contient le `jeton_acces` à présenter en `Authorization: Bearer`.
+Saisissez l'email et le mot de passe de l'administrateur : l'application
+affiche un QR code à scanner avec une application d'authentification
+(Microsoft Authenticator, Google Authenticator, FreeOTP…), puis demande le
+code à 6 chiffres. Les connexions suivantes demandent directement le code.
 
-Les connexions suivantes renvoient directement `etape: "totp"`.
+## Utilisation
+
+1. **Missions** : créez une mission (et son client), puis composez l'équipe :
+   responsable, consultant, relecteur.
+2. **Diagnostic** : depuis la mission, lancez un diagnostic de maturité. Il
+   utilise la version active du référentiel, figée pour toute sa durée.
+3. **Profilage** : les réponses font ressortir les réglementations
+   (obligatoire, à vérifier, recommandé). Tranchez les « à vérifier » ; une
+   justification est demandée quand vous vous écartez du calcul. Les
+   réglementations retenues fixent la profondeur du questionnaire et les
+   cibles.
+4. **Plan d'ateliers** : l'outil regroupe les questions par interlocuteurs et
+   les découpe en ateliers sous le budget (2 h par défaut). Passez les
+   questions factuelles en pré-questionnaire.
+5. **Pré-questionnaire** : créez un lien et envoyez-le au client. Il répond
+   sans compte ; ses propositions apparaissent dans le questionnaire.
+6. **Questionnaire** : un clic sur le niveau observé l'enregistre.
+7. **Résultats** : scores, cibles, écarts, recommandations et audits
+   proposés. Le responsable finalise : les résultats sont figés.
+
+| Rôle sur la mission | Lire | Saisir | Gérer l'équipe, finaliser |
+|---|---|---|---|
+| Responsable | oui | oui | oui |
+| Consultant | oui | oui | non |
+| Relecteur | oui | non | non |
+
+Un administrateur a tous les droits sur toutes les missions.
 
 ## Commandes d'administration
 
@@ -109,18 +135,19 @@ Les deux commandes d'import acceptent `--simulation` (valide sans écrire) et
 `--remplacer` (remplace une version déjà importée, tant qu'aucun audit ne
 l'utilise).
 
-## API (jalon 1)
+## API
 
-| Route | Accès | Rôle |
-|---|---|---|
-| `POST /api/auth/connexion`, `POST /api/auth/totp` | public | Connexion en deux étapes |
-| `GET /api/auth/moi`, `POST /api/auth/mot-de-passe` | connecté | Compte courant |
-| `GET/POST /api/utilisateurs`, `PATCH /api/utilisateurs/{id}` | admin | Comptes |
-| `POST /api/utilisateurs/{id}/reinitialiser-totp`, `/debloquer`, `/mot-de-passe` | admin | Assistance |
-| `GET /api/contenu/referentiels`, `GET /api/contenu/referentiels/{code}` | connecté | Référentiels |
-| `GET /api/contenu/couverture/{code}` | connecté | Couverture d'un pivot |
-| `GET /api/contenu/disponibles`, `POST /api/contenu/import` | admin | Import depuis le dossier de contenu |
-| `GET /api/journal` | admin | Journal d'audit |
+La liste complète et à jour est sur `/docs`. Principales familles :
+
+| Préfixe | Rôle |
+|---|---|
+| `/api/auth` | Connexion en deux étapes, compte courant |
+| `/api/utilisateurs`, `/api/annuaire` | Comptes (admin), annuaire pour composer une équipe |
+| `/api/clients`, `/api/missions` | Clients, missions, équipe, création des diagnostics |
+| `/api/diagnostics/{id}` | Profilage, réglementations, questionnaire, ateliers, liens, résultats, finalisation |
+| `/api/public/pre-questionnaire/{jeton}` | Pré-questionnaire du client, sans compte |
+| `/api/contenu` | Référentiels, import, couverture |
+| `/api/journal` | Journal d'audit (admin) |
 
 ## Sécurité
 
@@ -133,6 +160,10 @@ l'utilise).
   ou le TOTP changent, ou que le compte est désactivé.
 - Journal d'audit : toute modification ou suppression est refusée par la base
   (déclencheurs PostgreSQL).
+- Accès aux missions par rôle ; une mission dont on n'est pas membre répond
+  « introuvable ».
+- Liens de pré-questionnaire : jeton aléatoire de 256 bits, seule son
+  empreinte est conservée ; durée limitée (60 jours au plus), révocables.
 - Conteneur API en système de fichiers en lecture seule, utilisateur non root,
   port exposé sur `127.0.0.1` uniquement.
 
@@ -144,15 +175,18 @@ refaire l'enrôlement. Elles vivent dans le volume Docker `cles` : un
 ## Développement
 
 ```
+Dockerfile        image unique : interface compilée + API
 backend/
   app/
-    api/          routes (auth, utilisateurs, contenu, journal)
+    api/          routes (auth, utilisateurs, missions, diagnostics, contenu, journal)
     contenu/      validation, import et couverture des référentiels
+    diagnostic/   profilage, calculs, plan d'ateliers
     models.py     modèle de données
     securite.py   mots de passe, TOTP, jetons
     cli.py        commandes npa
   alembic/        migrations
   tests/          tests (PostgreSQL réel)
+frontend/         interface web (React, TypeScript, Vite)
 content/          référentiels (démonstration)
 docs/
 ```
@@ -169,3 +203,10 @@ NPA_TEST_DATABASE_URL=postgresql+psycopg://npa:npa@localhost:5432/npa_test pytes
 ```
 
 Style : `ruff check` et `ruff format`.
+
+Interface : avec l'API lancée sur le port 8000, `npm run dev` sert
+l'interface avec rechargement à chaud (les appels `/api` sont relayés).
+
+```bash
+cd frontend && npm ci && npm run dev
+```

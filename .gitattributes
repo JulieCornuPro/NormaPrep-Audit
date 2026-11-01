@@ -2,3 +2,6 @@
 # poste Windows (sinon « /bin/sh^M: not found » au démarrage).
 *.sh text eol=lf
 Dockerfile text eol=lf
+
+*.ts text eol=lf
+*.tsx text eol=lf

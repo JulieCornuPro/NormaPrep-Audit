@@ -16,6 +16,7 @@ dependencies = [
     "pyotp>=2.9,<3",
     "pyjwt>=2.8,<3",
     "cryptography>=42",
+    "segno>=1.6",
 ]
 
 [project.optional-dependencies]
