@@ -1,0 +1,150 @@
+:root {
+  --fond: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f0f2f5;
+  --texte: #1c2330;
+  --texte-2: #5b6575;
+  --bordure: #dde1e7;
+  --accent: #1f5fbf;
+  --accent-texte: #ffffff;
+  --accent-doux: #e7effb;
+  --ok: #1d7a46;
+  --ok-doux: #e3f3ea;
+  --alerte: #a15c00;
+  --alerte-doux: #fbf0dd;
+  --danger: #b42318;
+  --danger-doux: #fbe9e7;
+  --rayon: 8px;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fond: #12161d;
+    --surface: #1a2029;
+    --surface-2: #222a35;
+    --texte: #e6e9ee;
+    --texte-2: #9aa4b2;
+    --bordure: #2e3744;
+    --accent: #6ea2f2;
+    --accent-texte: #0b1220;
+    --accent-doux: #1d2c44;
+    --ok: #5fc58c;
+    --ok-doux: #173326;
+    --alerte: #e3a64a;
+    --alerte-doux: #3a2c14;
+    --danger: #f08a80;
+    --danger-doux: #3e1e1b;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--fond);
+  color: var(--texte);
+  font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+h1 { font-size: 1.5rem; margin: 0 0 4px; }
+h2 { font-size: 1.15rem; margin: 24px 0 8px; }
+h3 { font-size: 1rem; margin: 16px 0 6px; }
+a { color: var(--accent); }
+p { margin: 0 0 8px; }
+.discret { color: var(--texte-2); font-size: 0.9em; }
+
+/* ---- structure ---- */
+.entete {
+  display: flex; align-items: center; gap: 24px;
+  padding: 0 24px; height: 56px;
+  background: var(--surface); border-bottom: 1px solid var(--bordure);
+}
+.entete .marque { font-weight: 700; color: var(--texte); text-decoration: none; }
+.entete nav { display: flex; gap: 4px; flex: 1; }
+.entete nav a {
+  padding: 6px 10px; border-radius: 6px; color: var(--texte-2); text-decoration: none;
+}
+.entete nav a.active { background: var(--accent-doux); color: var(--accent); }
+.page { max-width: 1100px; margin: 0 auto; padding: 24px; }
+.page-etroite { max-width: 420px; margin: 64px auto; padding: 0 16px; }
+
+.carte {
+  background: var(--surface); border: 1px solid var(--bordure);
+  border-radius: var(--rayon); padding: 16px 20px; margin-bottom: 16px;
+}
+.ligne { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.ligne.espace { justify-content: space-between; }
+.grille-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+
+/* ---- formulaires ---- */
+label { display: block; font-weight: 600; margin: 12px 0 4px; }
+input, select, textarea {
+  width: 100%; padding: 8px 10px; font: inherit; color: var(--texte);
+  background: var(--surface); border: 1px solid var(--bordure); border-radius: 6px;
+}
+textarea { min-height: 64px; resize: vertical; }
+input[type="checkbox"], input[type="radio"] { width: auto; margin: 0 6px 0 0; }
+.choix { display: flex; align-items: center; font-weight: 400; margin: 4px 0; cursor: pointer; }
+button {
+  font: inherit; padding: 8px 14px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--bordure); background: var(--surface); color: var(--texte);
+}
+button.principal { background: var(--accent); border-color: var(--accent); color: var(--accent-texte); font-weight: 600; }
+button.danger { color: var(--danger); }
+button:disabled { opacity: 0.55; cursor: default; }
+button.lien { border: none; background: none; color: var(--accent); padding: 0; }
+
+/* ---- messages et pastilles ---- */
+.message { padding: 10px 14px; border-radius: 6px; margin: 12px 0; }
+.message.erreur { background: var(--danger-doux); color: var(--danger); }
+.message.info { background: var(--accent-doux); color: var(--texte); }
+.message.alerte { background: var(--alerte-doux); color: var(--texte); }
+.message.ok { background: var(--ok-doux); color: var(--texte); }
+.message ul { margin: 0; padding-left: 18px; }
+.pastille {
+  display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 0.82em;
+  background: var(--surface-2); color: var(--texte-2); white-space: nowrap;
+}
+.pastille.ok { background: var(--ok-doux); color: var(--ok); }
+.pastille.alerte { background: var(--alerte-doux); color: var(--alerte); }
+.pastille.danger { background: var(--danger-doux); color: var(--danger); }
+.pastille.accent { background: var(--accent-doux); color: var(--accent); }
+
+/* ---- tableaux ---- */
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--bordure); vertical-align: top; }
+th { font-size: 0.85em; color: var(--texte-2); font-weight: 600; }
+td.nombre, th.nombre { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ---- onglets ---- */
+.onglets { display: flex; gap: 4px; border-bottom: 1px solid var(--bordure); margin: 16px 0; flex-wrap: wrap; }
+.onglets a {
+  padding: 8px 14px; text-decoration: none; color: var(--texte-2);
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.onglets a.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+/* ---- questionnaire ---- */
+.question { border-top: 1px solid var(--bordure); padding: 16px 0; }
+.question:first-of-type { border-top: none; }
+.niveaux { display: grid; gap: 6px; margin: 10px 0; }
+.niveau {
+  display: grid; grid-template-columns: 32px 1fr; gap: 8px; align-items: start;
+  padding: 8px 10px; border: 1px solid var(--bordure); border-radius: 6px;
+  background: var(--surface); text-align: left; cursor: pointer; font-weight: 400;
+}
+.niveau .chiffre { font-weight: 700; color: var(--texte-2); }
+.niveau.choisi { border-color: var(--accent); background: var(--accent-doux); }
+.niveau.choisi .chiffre { color: var(--accent); }
+.niveau.propose { outline: 2px dashed var(--alerte); outline-offset: -2px; }
+.progression { height: 8px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+.progression > div { height: 100%; background: var(--accent); }
+
+.qr svg { display: block; width: 200px; height: 200px; background: #fff; padding: 4px; border-radius: 6px; }
+code { background: var(--surface-2); padding: 1px 6px; border-radius: 4px; font-size: 0.9em; word-break: break-all; }
+
+@media (max-width: 640px) {
+  .entete { flex-wrap: wrap; height: auto; padding: 8px 16px; gap: 8px; }
+  .page { padding: 16px; }
+  table { font-size: 0.9em; }
+}

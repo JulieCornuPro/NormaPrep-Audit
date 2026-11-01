@@ -20,15 +20,16 @@ rappelées ci-dessous.
 | Pré-remplissage du socle | Seuil défini par correspondance, règle par défaut sinon |
 | Niveau des contrôles (CIS L1/L2, ANSSI standard/renforcé) | Choisi par l'auditeur |
 | Benchmarks CIS | Convertis de PDF en Excel, puis importés |
-| Budget d'un atelier | 2 heures |
+| Budget d'un atelier | 2 heures (réglable par diagnostic) |
+| Pré-questionnaire | Lien sans compte, le client propose un niveau, le consultant valide |
 | Qualification (PASSI, ISO 17020) | Non visée pour le moment |
 
 ## Jalons
 
 1. **Socle** — Docker, comptes et TOTP, import des référentiels,
    correspondances ANSSI, journal d'audit. *Livré (voir README).*
-2. **Maturité** — profilage, plan d'ateliers automatique, pré-questionnaire,
-   scores et écarts.
+2. **Maturité** — interface web, missions et équipes, profilage, plan
+   d'ateliers automatique, pré-questionnaire, scores et écarts. *Livré.*
 3. **Audits** — socle EBIOS RM, conformité ANSSI, pré-remplissage, preuves et
    constats.
 4. **Rapports** — modèles DOCX et PDF, scripts de collecte, premier benchmark
