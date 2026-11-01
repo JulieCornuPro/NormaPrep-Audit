@@ -29,7 +29,8 @@ services:
       - path: .env
         required: false
     environment:
-      NPA_DATABASE_URL: postgresql+psycopg://npa:${NPA_DB_PASSWORD}@db:5432/npa
+      NPA_DB_HOTE: db
+      NPA_DB_PASSWORD: ${NPA_DB_PASSWORD}
       NPA_DOSSIER_CONTENU: /content
     volumes:
       # Référentiels à importer, en lecture seule.

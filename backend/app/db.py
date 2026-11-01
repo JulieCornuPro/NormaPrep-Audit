@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-from app.config import reglages
+from app.config import reglages, url_base
 
 
 class Base(DeclarativeBase):
@@ -16,7 +16,7 @@ class Base(DeclarativeBase):
 
 @lru_cache
 def moteur() -> Engine:
-    return create_engine(reglages().database_url, pool_pre_ping=True)
+    return create_engine(url_base(reglages()), pool_pre_ping=True)
 
 
 @lru_cache

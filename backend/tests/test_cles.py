@@ -57,3 +57,12 @@ def test_rien_n_est_genere_si_l_environnement_fournit_tout(monkeypatch, tmp_path
     monkeypatch.setenv("NPA_FICHIER_CLES", str(fichier))
     assert config.preparer_cles() == "Clés de l'application : en place."
     assert not fichier.exists()
+
+
+def test_mot_de_passe_de_base_avec_caracteres_speciaux(monkeypatch):
+    """Un « % », un « @ » ou un « / » dans NPA_DB_PASSWORD ne cassent plus l'URL."""
+    monkeypatch.delenv("NPA_DATABASE_URL", raising=False)
+    monkeypatch.setenv("NPA_DB_PASSWORD", "a%2b@c/d:e#f")
+    monkeypatch.setenv("NPA_DB_HOTE", "db")
+    url = config.url_base(config.Reglages())
+    assert (url.password, url.host, url.database) == ("a%2b@c/d:e#f", "db", "npa")
