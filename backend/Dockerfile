@@ -15,6 +15,8 @@ RUN pip install .
 COPY alembic.ini ./
 COPY alembic ./alembic
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+# Droit d'exécution explicite : il peut se perdre lors d'un clone sous Windows.
+RUN chmod 755 /usr/local/bin/docker-entrypoint.sh
 
 USER npa
 EXPOSE 8000
