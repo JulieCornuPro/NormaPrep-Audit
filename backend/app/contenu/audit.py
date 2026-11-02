@@ -150,6 +150,11 @@ def _valider(d: dict[str, Any], f: str, r: Rapport) -> dict[str, Any]:
     if nb_controles == 0 and r.valide:
         r.avertir(f, "Aucun contrôle : le référentiel ne pourra servir que de pivot (niveau exigence).")
 
+    modele["niveaux"] = ["Section", "Exigence", "Contrôle"]
+    modele["profils"] = list(niveaux)
+    modele["niveau_socle"] = 1
+    modele["noeuds"] = _en_noeuds(modele["sections"], list(niveaux))
+
     # Une correspondance ne vise pas le référentiel lui-même.
     for s in modele["sections"]:
         for e in s["exigences"]:
@@ -158,3 +163,31 @@ def _valider(d: dict[str, Any], f: str, r: Rapport) -> dict[str, Any]:
                     if corr["referentiel"] == code:
                         r.erreur(corr["ou"], "Une correspondance doit viser un autre référentiel.")
     return modele
+
+
+def _en_noeuds(sections: list[dict[str, Any]], niveaux: list[str]) -> list[dict[str, Any]]:
+    """Sections, exigences et contrôles du format JSON → nœuds de l'arborescence.
+    Les niveaux sont cumulatifs : un contrôle « Standard » s'applique aussi aux
+    niveaux suivants (« Renforcé »)."""
+
+    def profils(niveau: str) -> list[str]:
+        return niveaux[niveaux.index(niveau) :] if niveau in niveaux else ([niveau] if niveau else [])
+
+    noeuds: list[dict[str, Any]] = []
+    vide = {"description": "", "methode": "", "verification": "", "valeur_attendue": "", "preuves_attendues": [],
+            "recommandation": "", "interlocuteurs": [], "poids": 1.0, "profils": [], "correspondances": []}  # fmt: skip
+    for s in sections:
+        noeuds.append({**vide, "code": s["code"], "libelle": s["libelle"], "description": s["description"], "niveau": 0,
+                       "parent": None, "ordre": len(noeuds) + 1})  # fmt: skip
+        for e in s["exigences"]:
+            noeuds.append({**vide, "code": e["code"], "libelle": e["libelle"], "description": e["description"],
+                           "niveau": 1, "parent": s["code"], "ordre": len(noeuds) + 1})  # fmt: skip
+            for c in e["controles"]:
+                noeuds.append({
+                    **vide, "code": c["code"], "libelle": c["intitule"], "description": c["description"], "niveau": 2,
+                    "parent": e["code"], "ordre": len(noeuds) + 1, "profils": profils(c["niveau"]),
+                    "methode": c["methode"], "verification": c["verification"], "valeur_attendue": c["valeur_attendue"],
+                    "preuves_attendues": c["preuves_attendues"], "recommandation": c["recommandation"], "poids": c["poids"],
+                    "correspondances": c["correspondances"],
+                })  # fmt: skip
+    return noeuds

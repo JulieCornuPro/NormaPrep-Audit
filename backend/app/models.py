@@ -31,6 +31,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -93,8 +94,22 @@ NATURE_AUDIT = "audit"
 
 
 class Referentiel(Base):
+    """Une version figée d'un référentiel. Les référentiels de la bibliothèque
+    ont mission_id nul ; un référentiel propre à un client (sa PSSI, ses
+    règles internes) est rattaché à une mission et n'est visible que là."""
+
     __tablename__ = "referentiel"
-    __table_args__ = (UniqueConstraint("code", "version"),)
+    __table_args__ = (
+        Index("uq_referentiel_bibliotheque", "code", "version", unique=True, postgresql_where=text("mission_id IS NULL")),
+        Index(
+            "uq_referentiel_mission",
+            "mission_id",
+            "code",
+            "version",
+            unique=True,
+            postgresql_where=text("mission_id IS NOT NULL"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     code: Mapped[str] = mapped_column(String(50))
@@ -103,6 +118,13 @@ class Referentiel(Base):
     libelle: Mapped[str] = mapped_column(String(300))
     source: Mapped[str] = mapped_column(Text, default="")
     licence: Mapped[str] = mapped_column(Text, default="")
+    mission_id: Mapped[int | None] = mapped_column(ForeignKey("mission.id", ondelete="CASCADE"), default=None)
+    # Noms des niveaux de l'arborescence (« Section », « Exigence », « Contrôle »…).
+    niveaux: Mapped[list[str]] = mapped_column(JSON, default=list)
+    # Profils d'applicabilité (« Standard », « Renforcé » ; « EI », « EE »). Vide : aucun.
+    profils: Mapped[list[str]] = mapped_column(JSON, default=list)
+    # Niveau (indice dans `niveaux`) évalué dans le socle de sécurité : la mesure.
+    niveau_socle: Mapped[int] = mapped_column(Integer, default=1)
     # La version active d'un code est celle que les nouveaux audits utilisent.
     actif: Mapped[bool] = mapped_column(Boolean, default=False)
     # SHA-256 du contenu importé : un import identique est reconnu.
@@ -111,69 +133,37 @@ class Referentiel(Base):
     importe_par: Mapped[int | None] = mapped_column(ForeignKey("utilisateur.id"), default=None)
     avertissements: Mapped[list[str]] = mapped_column(JSON, default=list)
 
-    sections: Mapped[list["Section"]] = relationship(
-        back_populates="referentiel", cascade="all, delete-orphan", order_by="Section.ordre"
-    )
+
+# ---- Référentiels d'audit : arborescence de profondeur libre ----------------
 
 
-# ---- Référentiels d'audit : Section > Exigence > Contrôle -----------------
+class Noeud(Base):
+    """Un élément d'un référentiel d'audit (section, mesure, contrôle, point de
+    contrôle…), à n'importe quelle profondeur. Les codes sont uniques dans le
+    référentiel, tous niveaux confondus : une correspondance peut viser
+    n'importe quel élément."""
 
-
-class Section(Base):
-    __tablename__ = "section"
-    __table_args__ = (UniqueConstraint("referentiel_id", "code"),)
+    __tablename__ = "noeud"
+    __table_args__ = (UniqueConstraint("referentiel_id", "code"), Index("ix_noeud_parent", "parent_id"))
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     referentiel_id: Mapped[int] = mapped_column(ForeignKey("referentiel.id", ondelete="CASCADE"))
-    code: Mapped[str] = mapped_column(String(50))
-    libelle: Mapped[str] = mapped_column(String(300))
-    description: Mapped[str] = mapped_column(Text, default="")
+    parent_id: Mapped[int | None] = mapped_column(ForeignKey("noeud.id", ondelete="CASCADE"), default=None)
+    niveau: Mapped[int] = mapped_column(Integer)  # indice dans Referentiel.niveaux
     ordre: Mapped[int] = mapped_column(Integer)
-
-    referentiel: Mapped[Referentiel] = relationship(back_populates="sections")
-    exigences: Mapped[list["Exigence"]] = relationship(
-        back_populates="section", cascade="all, delete-orphan", order_by="Exigence.ordre"
-    )
-
-
-class Exigence(Base):
-    __tablename__ = "exigence"
-    __table_args__ = (UniqueConstraint("referentiel_id", "code"),)
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    referentiel_id: Mapped[int] = mapped_column(ForeignKey("referentiel.id", ondelete="CASCADE"))
-    section_id: Mapped[int] = mapped_column(ForeignKey("section.id", ondelete="CASCADE"))
-    code: Mapped[str] = mapped_column(String(50))
-    libelle: Mapped[str] = mapped_column(String(500))
+    code: Mapped[str] = mapped_column(String(60))
+    libelle: Mapped[str] = mapped_column(Text)
     description: Mapped[str] = mapped_column(Text, default="")
-    ordre: Mapped[int] = mapped_column(Integer)
-
-    section: Mapped[Section] = relationship(back_populates="exigences")
-    controles: Mapped[list["Controle"]] = relationship(
-        back_populates="exigence", cascade="all, delete-orphan", order_by="Controle.ordre"
-    )
-
-
-class Controle(Base):
-    __tablename__ = "controle"
-    __table_args__ = (UniqueConstraint("referentiel_id", "code"),)
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    referentiel_id: Mapped[int] = mapped_column(ForeignKey("referentiel.id", ondelete="CASCADE"))
-    exigence_id: Mapped[int] = mapped_column(ForeignKey("exigence.id", ondelete="CASCADE"))
-    code: Mapped[str] = mapped_column(String(50))
-    intitule: Mapped[str] = mapped_column(Text)
-    description: Mapped[str] = mapped_column(Text, default="")
-    niveau: Mapped[str] = mapped_column(String(30), default="")
-    methode: Mapped[str] = mapped_column(String(30))
+    # Profils où l'élément s'applique ; vide = tous.
+    profils: Mapped[list[str]] = mapped_column(JSON, default=list)
+    # Champs facultatifs d'évaluation (audit de configuration, entretiens).
+    methode: Mapped[str] = mapped_column(String(30), default="")
     verification: Mapped[str] = mapped_column(Text, default="")
     valeur_attendue: Mapped[str] = mapped_column(Text, default="")
     preuves_attendues: Mapped[list[str]] = mapped_column(JSON, default=list)
     recommandation: Mapped[str] = mapped_column(Text, default="")
+    interlocuteurs: Mapped[list[str]] = mapped_column(JSON, default=list)
     poids: Mapped[float] = mapped_column(Float, default=1.0)
-    ordre: Mapped[int] = mapped_column(Integer)
-
-    exigence: Mapped[Exigence] = relationship(back_populates="controles")
 
 
 # ---- Référentiel de maturité (format NormaPrep) ---------------------------
@@ -294,6 +284,10 @@ class Reglementation(Base):
     # {"G3": {"profondeur": "renforce", "cible": 4.0}}
     exigences: Mapped[dict[str, dict[str, Any]]] = mapped_column(JSON, default=dict)
     ordre: Mapped[int] = mapped_column(Integer)
+    # Référentiel du socle de sécurité EBIOS RM que cette réglementation appelle
+    # (ex. NIS2-EI → ReCyF, profil « EI »). Facultatif.
+    referentiel_code: Mapped[str | None] = mapped_column(String(50), default=None)
+    referentiel_profil: Mapped[str | None] = mapped_column(String(60), default=None)
 
 
 # ---- Correspondances --------------------------------------------------------
@@ -457,3 +451,133 @@ class LienPreQuestionnaire(Base):
     cree_le: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     cree_par: Mapped[int | None] = mapped_column(ForeignKey("utilisateur.id"), default=None)
     derniere_utilisation: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+
+# ---------------------------------------------------------------------------
+# Analyse de risques EBIOS RM (jalon 3 : atelier 1)
+# ---------------------------------------------------------------------------
+
+# Échelle de gravité par défaut, modifiable par analyse.
+ECHELLE_GRAVITE_DEFAUT = [
+    {"niveau": 1, "libelle": "Mineure", "description": "Aucun impact opérationnel ni sur les performances de l'activité."},
+    {
+        "niveau": 2,
+        "libelle": "Significative",
+        "description": "Dégradation des performances de l'activité, sans impact sur la sécurité des personnes et des biens.",
+    },
+    {
+        "niveau": 3,
+        "libelle": "Grave",
+        "description": "Forte dégradation des performances de l'activité, avec d'éventuels impacts significatifs sur la sécurité des personnes et des biens.",
+    },
+    {
+        "niveau": 4,
+        "libelle": "Critique",
+        "description": "Incapacité à assurer tout ou partie de l'activité, avec d'éventuels impacts graves sur la sécurité des personnes et des biens.",
+    },
+]
+
+ETATS_SOCLE = ("applique", "partiel", "non_applique", "non_evalue", "non_applicable")
+
+
+class AnalyseRisques(Base):
+    __tablename__ = "analyse_risques"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    mission_id: Mapped[int] = mapped_column(ForeignKey("mission.id", ondelete="CASCADE"))
+    titre: Mapped[str] = mapped_column(String(300))
+    statut: Mapped[str] = mapped_column(String(20), default="en_cours")
+    # Cadrage (atelier 1).
+    objet: Mapped[str] = mapped_column(Text, default="")
+    perimetre: Mapped[str] = mapped_column(Text, default="")
+    participants: Mapped[str] = mapped_column(Text, default="")
+    cycle_strategique_mois: Mapped[int | None] = mapped_column(Integer, default=None)
+    cycle_operationnel_mois: Mapped[int | None] = mapped_column(Integer, default=None)
+    echelle_gravite: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=lambda: list(ECHELLE_GRAVITE_DEFAUT))
+    # Diagnostic de maturité de la même mission dont on reprend les éléments.
+    diagnostic_id: Mapped[int | None] = mapped_column(ForeignKey("diagnostic.id", ondelete="SET NULL"), default=None)
+    cree_le: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    cree_par: Mapped[int | None] = mapped_column(ForeignKey("utilisateur.id"), default=None)
+
+    mission: Mapped[Mission] = relationship()
+
+
+class ValeurMetier(Base):
+    __tablename__ = "valeur_metier"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    analyse_id: Mapped[int] = mapped_column(ForeignKey("analyse_risques.id", ondelete="CASCADE"))
+    nom: Mapped[str] = mapped_column(String(300))
+    nature: Mapped[str] = mapped_column(String(20), default="processus")  # processus | information
+    description: Mapped[str] = mapped_column(Text, default="")
+    responsable: Mapped[str] = mapped_column(String(200), default="")
+    ordre: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class LienValeurBien(Base):
+    __tablename__ = "lien_valeur_bien"
+    __table_args__ = (UniqueConstraint("valeur_metier_id", "bien_support_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    valeur_metier_id: Mapped[int] = mapped_column(ForeignKey("valeur_metier.id", ondelete="CASCADE"))
+    bien_support_id: Mapped[int] = mapped_column(ForeignKey("bien_support.id", ondelete="CASCADE"))
+
+
+class BienSupport(Base):
+    __tablename__ = "bien_support"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    analyse_id: Mapped[int] = mapped_column(ForeignKey("analyse_risques.id", ondelete="CASCADE"))
+    nom: Mapped[str] = mapped_column(String(300))
+    description: Mapped[str] = mapped_column(Text, default="")
+    responsable: Mapped[str] = mapped_column(String(200), default="")
+    ordre: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class EvenementRedoute(Base):
+    __tablename__ = "evenement_redoute"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    analyse_id: Mapped[int] = mapped_column(ForeignKey("analyse_risques.id", ondelete="CASCADE"))
+    valeur_metier_id: Mapped[int] = mapped_column(ForeignKey("valeur_metier.id", ondelete="CASCADE"))
+    description: Mapped[str] = mapped_column(Text)
+    # Catégories d'impact : missions, humains, matériels, gouvernance, financiers, juridiques, image…
+    impacts: Mapped[list[str]] = mapped_column(JSON, default=list)
+    gravite: Mapped[int] = mapped_column(Integer)
+    ordre: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class SocleReferentiel(Base):
+    """Un référentiel retenu dans le socle de sécurité d'une analyse, sur une
+    version figée et avec un profil."""
+
+    __tablename__ = "socle_referentiel"
+    __table_args__ = (UniqueConstraint("analyse_id", "referentiel_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    analyse_id: Mapped[int] = mapped_column(ForeignKey("analyse_risques.id", ondelete="CASCADE"))
+    referentiel_id: Mapped[int] = mapped_column(ForeignKey("referentiel.id"))
+    profil: Mapped[str | None] = mapped_column(String(60), default=None)
+    # Pourquoi ce référentiel : réglementation qui l'appelle, ou choix de l'analyste.
+    motif: Mapped[str] = mapped_column(Text, default="")
+    ordre: Mapped[int] = mapped_column(Integer, default=0)
+
+    referentiel: Mapped[Referentiel] = relationship()
+
+
+class EtatSocle(Base):
+    """État d'application d'un élément du référentiel (une mesure, en général)."""
+
+    __tablename__ = "etat_socle"
+    __table_args__ = (UniqueConstraint("socle_referentiel_id", "noeud_code"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    socle_referentiel_id: Mapped[int] = mapped_column(ForeignKey("socle_referentiel.id", ondelete="CASCADE"))
+    noeud_code: Mapped[str] = mapped_column(String(60))
+    etat: Mapped[str] = mapped_column(String(20), default="non_evalue")
+    ecart: Mapped[str] = mapped_column(Text, default="")
+    justification: Mapped[str] = mapped_column(Text, default="")
+    # saisie | maturite (présomption depuis le diagnostic, à valider)
+    source: Mapped[str] = mapped_column(String(20), default="saisie")
+    saisi_par: Mapped[int | None] = mapped_column(ForeignKey("utilisateur.id"), default=None)
+    saisi_le: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)

@@ -8,7 +8,7 @@ conteneur Docker.
 - Cahier des charges : [docs/cahier-des-charges.md](docs/cahier-des-charges.md)
 - Format des référentiels : [docs/format-contenu.md](docs/format-contenu.md)
 
-## État : jalons 1 et 2
+## État : jalons 1 à 3
 
 | Fonction | État |
 |---|---|
@@ -18,11 +18,14 @@ conteneur Docker.
 | Journal d'audit inaltérable | fait |
 | Clients, missions, équipe et rôles par mission | fait |
 | Diagnostic : profilage réglementaire, arbitrage, profondeur et cibles | fait |
-| Plan d'ateliers automatique (budget, interlocuteurs, modes de recueil) | fait |
+| Plan d'entretiens automatique (budget, interlocuteurs, modes de recueil) | fait |
 | Questionnaire à niveaux, pré-questionnaire client par lien | fait |
 | Résultats : scores, écarts, radar, recommandations, audits proposés, finalisation | fait |
-| Audits (socle EBIOS RM, conformité ANSSI, configuration CIS), preuves | jalon 3 |
-| Rapports DOCX / PDF | jalon 4 |
+| Référentiels chargés depuis l'interface (classeur Excel), bibliothèque et référentiels client | fait |
+| EBIOS RM atelier 1 : cadrage, valeurs métier, biens supports, événements redoutés, socle de sécurité | fait |
+| Constats et rapports communs, audit de configuration (CIS) | jalon 4 |
+| EBIOS RM ateliers 2 à 5 | jalon 5 |
+| Audit de code, test d'intrusion | jalon 6 |
 
 ## Démarrage
 
@@ -204,14 +207,36 @@ l'application : aucun appel à un service externe.
    justification est demandée quand vous vous écartez du calcul. Les
    réglementations retenues fixent la profondeur du questionnaire et les
    cibles.
-4. **Plan d'ateliers** : l'outil regroupe les questions par interlocuteurs et
-   les découpe en ateliers sous le budget (2 h par défaut). Passez les
+4. **Plan d'entretiens** : l'outil regroupe les questions par interlocuteurs et
+   les découpe en entretiens sous le budget (2 h par défaut). Passez les
    questions factuelles en pré-questionnaire.
 5. **Pré-questionnaire** : créez un lien et envoyez-le au client. Il répond
    sans compte ; ses propositions apparaissent dans le questionnaire.
 6. **Questionnaire** : un clic sur le niveau observé l'enregistre.
 7. **Résultats** : scores, cibles, écarts, recommandations et audits
    proposés. Le responsable finalise : les résultats sont figés.
+
+**Référentiels.** Un administrateur charge les référentiels de la
+bibliothèque depuis **Administration › Référentiels** : un classeur Excel, une
+feuille par référentiel, listées dans une feuille « Infos » (format :
+[docs/format-contenu.md](docs/format-contenu.md)). « Vérifier » contrôle le
+classeur sans rien écrire. Le responsable d'une mission peut aussi charger les
+référentiels propres au client (politique interne…), visibles dans cette
+mission seulement.
+
+**Analyse de risques EBIOS RM** (atelier 1), depuis la mission, seule ou liée
+à un diagnostic de maturité :
+
+1. **Cadrage** : objet, périmètre, participants, cycles, échelle de gravité.
+2. **Valeurs métier et biens supports**, reliés entre eux.
+3. **Événements redoutés** : par valeur métier, impacts et gravité.
+4. **Socle de sécurité** : choisissez les référentiels applicables et leur
+   profil (ex. guide d'hygiène, Standard). Pour chaque mesure : appliquée,
+   partiellement, non appliquée ou non applicable, avec l'écart et sa
+   justification. Si l'analyse est liée à un diagnostic, les référentiels
+   appelés par les réglementations retenues sont proposés, et « Pré-remplir »
+   présume l'état des mesures depuis les réponses (à valider ; une saisie
+   n'est jamais écrasée).
 
 | Rôle sur la mission | Lire | Saisir | Gérer l'équipe, finaliser |
 |---|---|---|---|
@@ -232,9 +257,10 @@ Dans le conteneur : `docker compose exec api npa <commande>`.
 | `creer-admin --email … --nom …` | Crée un administrateur |
 | `importer-audit <fichier.json>` | Importe un référentiel d'audit |
 | `importer-maturite <dossier>` | Importe un référentiel de maturité |
+| `importer-excel <classeur.xlsx>` | Importe les référentiels d'un classeur Excel dans la bibliothèque |
 | `couverture <code>` | Couverture d'un référentiel pivot (`--json` pour le détail) |
 
-Les deux commandes d'import acceptent `--simulation` (valide sans écrire) et
+Les commandes d'import acceptent `--simulation` (valide sans écrire) et
 `--remplacer` (remplace une version déjà importée, tant qu'aucun audit ne
 l'utilise).
 

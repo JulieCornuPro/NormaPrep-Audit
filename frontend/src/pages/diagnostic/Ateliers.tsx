@@ -35,7 +35,7 @@ export default function Ateliers({ ctx }: { ctx: ContexteDiagnostic }) {
       <div className="carte">
         <div className="ligne espace">
           <div>
-            <strong>{p.ateliers.length} atelier(s)</strong> · {minutes(p.duree_totale_minutes)} au total
+            <strong>{p.ateliers.length} entretien(s)</strong> · {minutes(p.duree_totale_minutes)} au total
             {p.hors_atelier.pre_questionnaire?.length > 0 && <> · pré-questionnaire : {minutes(p.duree_pre_questionnaire_minutes)} côté client</>}
           </div>
           {ctx.saisie && (
@@ -47,21 +47,21 @@ export default function Ateliers({ ctx }: { ctx: ContexteDiagnostic }) {
           )}
         </div>
         <p className="discret">
-          Ateliers regroupés par interlocuteurs puis par sous-thème, sans dépasser le budget. Les durées sont des estimations par type de question, à
+          Entretiens regroupés par interlocuteurs puis par sous-thème, sans dépasser le budget. Les durées sont des estimations par type de question, à
           calibrer.
         </p>
         {p.depassements.length > 0 && (
-          <div className="message alerte">Atelier(s) {p.depassements.join(", ")} : une question dépasse seule le budget.</div>
+          <div className="message alerte">Entretien(s) {p.depassements.join(", ")} : une question dépasse seule le budget.</div>
         )}
         <Erreur erreur={action.erreur} />
       </div>
 
-      {p.ateliers.length === 0 && <div className="message info">Aucune question en atelier. Renseignez le profilage, ou ramenez des questions en atelier.</div>}
+      {p.ateliers.length === 0 && <div className="message info">Aucune question en entretien. Renseignez le profilage, ou ramenez des questions en entretien.</div>}
 
       {p.ateliers.map((a) => (
         <div key={a.numero} className="carte">
           <div className="ligne espace">
-            <h2 style={{ margin: 0 }}>Atelier {a.numero} · {interlocuteurs(a.interlocuteurs)}</h2>
+            <h2 style={{ margin: 0 }}>Entretien {a.numero} · {interlocuteurs(a.interlocuteurs)}</h2>
             <Pastille texte={minutes(a.duree_minutes)} ton={a.duree_minutes > p.budget_minutes ? "danger" : "accent"} />
           </div>
           <p className="discret">{a.sous_themes.map((s) => s.libelle).join(" · ")}</p>

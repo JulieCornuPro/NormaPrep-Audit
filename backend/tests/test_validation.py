@@ -186,7 +186,7 @@ def test_methode_et_niveau(tmp_path):
 
     rapport, _ = analyser_audit(tmp_path, f)
     assert any("« methode » doit valoir" in e for e in rapport.erreurs)
-    assert any("« niveau » doit valoir : standard, renforce" in e for e in rapport.erreurs)
+    assert any("« niveau » doit valoir : Standard, Renforcé" in e for e in rapport.erreurs)
 
 
 def test_correspondance_vers_soi_meme(tmp_path):

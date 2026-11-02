@@ -1,18 +1,23 @@
 """Clients et missions."""
 
+from dataclasses import asdict
 from datetime import datetime
+from typing import Annotated, Any
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from app.api import acces
+from app.api.contenu import ReferentielSortie, ResultatImportSortie, contenu_referentiel, lire_televersement
 from app.api.deps import SessionDep, UtilisateurDep, adresse_ip
+from app.contenu.importeur import importer_excel
 from app.journal import journaliser
 from app.models import (
     NATURE_MATURITE,
     ROLE_RESPONSABLE,
     ROLES_MISSION,
+    AnalyseRisques,
     Client,
     Diagnostic,
     MembreMission,
@@ -65,6 +70,13 @@ class DiagnosticResume(BaseModel):
     finalise_le: datetime | None
 
 
+class AnalyseResume(BaseModel):
+    id: int
+    titre: str
+    statut: str
+    cree_le: datetime
+
+
 class MissionSortie(BaseModel):
     id: int
     titre: str
@@ -76,6 +88,7 @@ class MissionSortie(BaseModel):
     droits: list[str] = []
     membres: list[MembreSortie] = []
     diagnostics: list[DiagnosticResume] = []
+    analyses: list[AnalyseResume] = []
 
 
 class Membre(BaseModel):
@@ -156,6 +169,10 @@ def _sortie(s: SessionDep, u: Utilisateur, m: Mission, detail: bool = False) -> 
                 finalise_le=d.finalise_le,
             )
             for d in s.scalars(select(Diagnostic).where(Diagnostic.mission_id == m.id).order_by(Diagnostic.id))
+        ]
+        sortie.analyses = [
+            AnalyseResume.model_validate(a, from_attributes=True)
+            for a in s.scalars(select(AnalyseRisques).where(AnalyseRisques.mission_id == m.id).order_by(AnalyseRisques.id))
         ]
     return sortie
 
@@ -266,3 +283,45 @@ def creer_diagnostic(mission_id: int, u: UtilisateurDep, s: SessionDep, request:
     return DiagnosticResume(
         id=d.id, statut=d.statut, referentiel=ref.code, version=ref.version, cree_le=d.cree_le, finalise_le=None
     )
+
+
+# ---- référentiels propres au client ------------------------------------------
+
+
+@router.get("/missions/{mission_id}/referentiels", response_model=list[ReferentielSortie], tags=["Contenu"])
+def referentiels_client(mission_id: int, u: UtilisateurDep, s: SessionDep) -> list[ReferentielSortie]:
+    acces.mission(s, u, mission_id)
+    req = (
+        select(Referentiel).where(Referentiel.mission_id == mission_id).order_by(Referentiel.code, Referentiel.importe_le.desc())
+    )
+    return [ReferentielSortie.model_validate(r, from_attributes=True) for r in s.scalars(req)]
+
+
+@router.get("/missions/{mission_id}/referentiels/{code}", tags=["Contenu"])
+def referentiel_client(mission_id: int, code: str, u: UtilisateurDep, s: SessionDep) -> dict[str, Any]:
+    acces.mission(s, u, mission_id)
+    ref = s.scalar(
+        select(Referentiel).where(Referentiel.mission_id == mission_id, Referentiel.code == code, Referentiel.actif.is_(True))
+    )
+    if ref is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Référentiel introuvable.")
+    return contenu_referentiel(s, ref)
+
+
+@router.post("/missions/{mission_id}/referentiels/televerser", response_model=list[ResultatImportSortie], tags=["Contenu"])
+async def televerser_referentiel_client(
+    mission_id: int,
+    u: UtilisateurDep,
+    s: SessionDep,
+    fichier: Annotated[UploadFile, File()],
+    simulation: Annotated[bool, Form()] = False,
+    remplacer: Annotated[bool, Form()] = False,
+) -> list[ResultatImportSortie]:
+    """Référentiel propre au client (PSSI, règles internes) : visible dans cette mission seulement."""
+    acces.mission(s, u, mission_id, acces.GESTION)
+    contenu = await lire_televersement(fichier)
+    resultats = importer_excel(
+        s, contenu, fichier.filename or "classeur.xlsx", utilisateur_id=u.id, simulation=simulation,
+        remplacer=remplacer, mission_id=mission_id,
+    )  # fmt: skip
+    return [ResultatImportSortie(**asdict(r)) for r in resultats]

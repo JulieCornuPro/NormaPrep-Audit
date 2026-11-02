@@ -7,11 +7,18 @@ seule dans le conteneur sous `/content`. Il est importé par un administrateur
 | Famille | Forme | Exemple livré |
 |---|---|---|
 | Référentiel de **maturité** | un dossier au format NormaPrep | `content/maturite/demo/` |
-| Référentiel d'**audit** | un fichier JSON Section > Exigence > Contrôle | `content/referentiels/anssi-hygiene-exemple.json` |
+| Référentiel d'**audit** | un **classeur Excel** chargé depuis l'interface (recommandé) | — |
+| | ou un fichier JSON Section > Exigence > Contrôle | `content/referentiels/anssi-hygiene-exemple.json` |
+
+Les référentiels d'audit servent aux socles de sécurité EBIOS RM et aux
+audits. Ils vivent dans la **bibliothèque** (chargés par un administrateur,
+visibles partout) ou sont **propres à un client** (chargés par le responsable
+de la mission, visibles dans cette mission seulement ; un même code peut
+exister dans la bibliothèque et chez un client).
 
 ## Règles communes
 
-- **Codes stables** : lettres, chiffres, `-`, `_` et `.` uniquement. Ils
+- **Codes stables** : lettres, chiffres, `-`, `_`, `.` et `/` uniquement. Ils
   identifient un élément d'une version à l'autre et servent aux
   correspondances.
 - **Tout ou rien** : à la moindre erreur, l'import est refusé et rien n'est
@@ -56,6 +63,18 @@ Ajouts, tous facultatifs :
 
 Les six `niveaux` restent obligatoires quel que soit le `type`.
 
+### Réglementation (`_reglementations.json`)
+
+| Champ | Règle |
+|---|---|
+| `referentiel` | Code d'un référentiel d'audit de la bibliothèque : proposé dans le socle EBIOS RM quand la réglementation est retenue. Absent en base : avertissement |
+| `profil` | Profil de ce référentiel à appliquer (ex. `Renforcé`). Le plus exigeant l'emporte si plusieurs réglementations appellent le même référentiel |
+
+```json
+{ "code": "NIS2-EE", "libelle": "NIS 2 — entité essentielle",
+  "referentiel": "ANSSI-HYG", "profil": "Renforcé" }
+```
+
 ### Prestation (`_prestations.json`)
 
 | Champ | Règle |
@@ -68,9 +87,55 @@ Les six `niveaux` restent obligatoires quel que soit le `type`.
   "referentiel_audit": "ANSSI-HYG", "sections": ["S09"] }
 ```
 
-## Référentiel d'audit
+## Référentiel d'audit : classeur Excel
 
-Un fichier JSON par référentiel (et par version).
+Format du brouillon « Socle de sécurité ». Chargement : **Administration ›
+Référentiels** (bibliothèque), carte **Référentiels du client** d'une mission,
+ou `npa importer-excel classeur.xlsx`. « Vérifier » (`--simulation`) valide
+sans rien écrire. Taille maximale : 15 Mo.
+
+**Feuille « Infos »** (obligatoire) : une ligne par feuille à importer. Les
+feuilles qui n'y figurent pas sont ignorées : on peut garder dans le même
+classeur des référentiels en cours de rédaction.
+
+| Colonne | Obligatoire | Règle |
+|---|---|---|
+| Feuille | oui | Nom exact de la feuille |
+| Code | oui | Code du référentiel, ex. `ANSSI-HYG` |
+| Version | oui | Changer de version pour importer un contenu modifié |
+| Libellé | oui | |
+| Source, Licence | non | Licence absente : avertissement |
+| Niveau socle | non | Nom du niveau évalué dans le socle EBIOS RM (ex. `Exigence`). Défaut : le deuxième niveau |
+| Profils cumulatifs | non | `Oui` : un élément applicable à un profil l'est aussi aux suivants (Standard → Renforcé) ; une incohérence est corrigée avec un avertissement |
+
+**Feuille d'un référentiel** : une ligne d'en-têtes, puis une ligne par
+élément.
+
+| Colonnes | Contenu |
+|---|---|
+| Niveaux, de gauche à droite (ex. Section, Exigence, Contrôle, Contrôle détaillé) | `code - libellé` (tiret entouré d'espaces, au moins après), ou `-` / vide si le niveau est absent. Le nombre de niveaux est libre |
+| Profils, en fin de ligne (ex. Standard, Renforcé) | `Oui` / `Non`. Une colonne qui ne contient que Oui/Non est un profil |
+| Facultatives, reconnues par leur en-tête | Interlocuteurs, Méthode, Preuves attendues, Vérification, Valeur attendue, Recommandation, Description |
+
+Chaque ligne décrit l'élément le plus profond qu'elle renseigne ; ses parents
+sont dans les colonnes de gauche. Un parent répété sur plusieurs lignes garde
+le même libellé. Une mesure sans contrôle est admise (c'est alors une
+exigence). Les codes sont uniques dans toute la feuille.
+
+| Section | Exigence | Contrôle | Standard | Renforcé |
+|---|---|---|---|---|
+| 1 - Sensibiliser et former | 1.1 - Former les équipes opérationnelles | - | Oui | Oui |
+| 1 - Sensibiliser et former | 1.1 - Former les équipes opérationnelles | 1.1.1 - Plan de formation à jour | Oui | Oui |
+| 10 - Pour aller plus loin | 42 - Mener des audits réguliers | - | Non | Oui |
+
+Erreurs fréquentes : cellule sans tiret (`7.A Cloisonnement` au lieu de
+`7.A - Cloisonnement`), code en double, même code avec deux libellés.
+
+## Référentiel d'audit : fichier JSON
+
+Un fichier JSON par référentiel (et par version), importé depuis le dossier
+`content/`. Il est converti dans la même arborescence que l'Excel (niveaux
+Section, Exigence, Contrôle).
 
 ```json
 {
@@ -102,7 +167,7 @@ Un fichier JSON par référentiel (et par version).
 | | `version` | oui | 30 caractères max |
 | | `libelle` | oui | |
 | | `source`, `licence` | non | Licence absente : avertissement |
-| | `niveaux` | non | Si présent, liste des valeurs admises pour `niveau` des contrôles |
+| | `niveaux` | non | Profils d'applicabilité (ex. `Standard`, `Renforcé`), cumulatifs : un contrôle de niveau `Standard` vaut aussi pour `Renforcé` |
 | Section | `code`, `libelle` | oui | |
 | | `description`, `exigences` | non | |
 | Exigence | `code`, `libelle` | oui | Une exigence sans contrôle est admise (référentiel pivot décrit par mesures) |
@@ -155,6 +220,5 @@ reliés parmi les versions actives, et les exigences non couvertes.
 
 ## À venir
 
-- Import des benchmarks CIS depuis Excel (convertis de leurs PDF) : jalon 4.
-- Référentiel ANSSI complet (42 mesures) : l'exemple livré n'en contient que
-  5, avec des intitulés à vérifier sur le guide officiel.
+- Benchmarks CIS convertis de PDF en Excel, et sorties des scripts de
+  collecte : jalon 4.

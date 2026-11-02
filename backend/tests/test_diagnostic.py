@@ -150,7 +150,7 @@ def test_scores_ecarts_et_recommandations(client, env):
     assert reco == ["G3-R1", "G3-Q01-R1", "I6-Q01-R1"]
     audits = {a["code"]: a for a in res["audits_proposes"]}
     assert set(audits) == {"EBIOS-RM", "AUDIT-ANSSI"}
-    assert (audits["AUDIT-ANSSI"]["referentiel_audit"], audits["AUDIT-ANSSI"]["sections"]) == ("ANSSI-HYG", ["S09"])
+    assert (audits["AUDIT-ANSSI"]["referentiel_audit"], audits["AUDIT-ANSSI"]["sections"]) == ("ANSSI-HYG", ["37"])
 
 
 def test_non_applicable_exclu_des_calculs(client, env):

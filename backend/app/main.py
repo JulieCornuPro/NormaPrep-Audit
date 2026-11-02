@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.api import auth, contenu, diagnostics, journal, missions, utilisateurs
+from app.api import analyses, auth, contenu, diagnostics, journal, missions, utilisateurs
 from app.config import reglages
 from app.securite import verifier_configuration
 
@@ -20,12 +20,12 @@ async def cycle_de_vie(app: FastAPI):
 
 app = FastAPI(
     title="NormaPrep Audit",
-    version="0.2.0",
+    version="0.3.0",
     description="Plateforme d'audit : diagnostic de maturité, audits et rapports.",
     lifespan=cycle_de_vie,
 )
 
-for module in (auth, utilisateurs, missions, diagnostics, contenu, journal):
+for module in (auth, utilisateurs, missions, diagnostics, analyses, contenu, journal):
     app.include_router(module.router)
 app.include_router(diagnostics.public)
 

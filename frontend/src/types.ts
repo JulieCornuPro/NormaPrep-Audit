@@ -41,6 +41,7 @@ export interface Mission {
   droits: string[];
   membres: Membre[];
   diagnostics: DiagnosticResume[];
+  analyses: AnalyseResume[];
 }
 
 export interface Synthese {
@@ -215,4 +216,126 @@ export interface Lien {
   derniere_utilisation: string | null;
   jeton?: string;
   chemin?: string;
+}
+
+export interface ReferentielResume {
+  id: number;
+  code: string;
+  version: string;
+  nature: string;
+  libelle: string;
+  source: string;
+  licence: string;
+  actif: boolean;
+  importe_le: string;
+  avertissements: string[];
+  niveaux: string[];
+  profils: string[];
+  niveau_socle: number;
+  mission_id: number | null;
+}
+
+export interface NoeudArbre {
+  code: string;
+  libelle: string;
+  niveau: number;
+  profils: string[];
+  description: string;
+  enfants: NoeudArbre[];
+}
+
+export interface ResultatImport {
+  succes: boolean;
+  deja_importe: boolean;
+  code: string;
+  version: string;
+  feuille: string;
+  erreurs: string[];
+  avertissements: string[];
+  stats: Record<string, number>;
+}
+
+export interface AnalyseResume {
+  id: number;
+  titre: string;
+  statut: string;
+  cree_le: string;
+}
+
+export interface NiveauGravite {
+  niveau: number;
+  libelle: string;
+  description: string;
+}
+
+export interface Analyse {
+  id: number;
+  mission_id: number;
+  mission_titre: string;
+  client: string;
+  titre: string;
+  statut: string;
+  objet: string;
+  perimetre: string;
+  participants: string;
+  cycle_strategique_mois: number | null;
+  cycle_operationnel_mois: number | null;
+  echelle_gravite: NiveauGravite[];
+  diagnostic_id: number | null;
+  diagnostics_mission: { id: number; statut: string }[];
+  droits: string[];
+  compte: Record<string, number>;
+  impacts: string[];
+}
+
+export interface ValeurMetier {
+  id: number;
+  nom: string;
+  nature: "processus" | "information";
+  description: string;
+  responsable: string;
+}
+
+export interface BienSupport {
+  id: number;
+  nom: string;
+  description: string;
+  responsable: string;
+  valeurs_metier: number[];
+}
+
+export interface EvenementRedoute {
+  id: number;
+  valeur_metier_id: number;
+  description: string;
+  impacts: string[];
+  gravite: number;
+}
+
+export interface ElementSocle {
+  code: string;
+  libelle: string;
+  groupe: string;
+  etat: string;
+  ecart: string;
+  justification: string;
+  source: string | null;
+  saisi_le: string | null;
+  details: { code: string; libelle: string; niveau: number }[];
+}
+
+export interface ReferentielSocle {
+  id: number;
+  referentiel: { id: number; code: string; version: string; libelle: string; client: boolean; profils: string[]; niveau: string };
+  profil: string | null;
+  motif: string;
+  compte: Record<string, number>;
+  sans_justification: number;
+  elements: ElementSocle[];
+}
+
+export interface Socle {
+  referentiels: ReferentielSocle[];
+  proposes: { referentiel_id: number; code: string; libelle: string; profil: string | null; motifs: string[] }[];
+  disponibles: { id: number; code: string; version: string; libelle: string; profils: string[]; client: boolean }[];
 }

@@ -2,6 +2,9 @@ import { useState } from "react";
 import { get, post } from "../../api";
 import { Chargement, Erreur, Pastille, useAction, useDonnees } from "../../composants/communs";
 import { dateHeure } from "../../libelles";
+import Televersement from "../../composants/Televersement";
+import ArbreReferentiel from "../../composants/ArbreReferentiel";
+import type { NoeudArbre } from "../../types";
 
 interface Ref {
   id: number;
@@ -12,6 +15,19 @@ interface Ref {
   actif: boolean;
   importe_le: string;
   avertissements: string[];
+  niveaux: string[];
+  profils: string[];
+}
+
+interface Detail {
+  code: string;
+  version: string;
+  libelle: string;
+  source: string;
+  licence: string;
+  niveaux: string[];
+  profils: string[];
+  arbre: NoeudArbre[];
 }
 
 interface ResultatImport {
@@ -37,6 +53,7 @@ export default function Referentiels() {
   const dispo = useDonnees(() => get<{ nature: string; chemin: string }[]>("/api/contenu/disponibles"), []);
   const [resultat, setResultat] = useState<ResultatImport | null>(null);
   const [couverture, setCouverture] = useState<Couverture | null>(null);
+  const [detail, setDetail] = useState<Detail | null>(null);
   const action = useAction();
 
   const importer = (nature: string, chemin: string, simulation: boolean) =>
@@ -71,6 +88,11 @@ export default function Referentiels() {
                   <td>{r.actif ? <Pastille texte="Active" ton="ok" /> : <Pastille texte="Ancienne" />}</td>
                   <td>
                     {r.actif && r.nature === "audit" && (
+                      <button className="lien" onClick={() => action.executer(async () => setDetail(await get<Detail>(`/api/contenu/referentiels/${r.code}`)))}>
+                        Consulter
+                      </button>
+                    )}{" "}
+                    {r.actif && r.nature === "audit" && (
                       <button className="lien" onClick={() => action.executer(async () => setCouverture(await get<Couverture>(`/api/contenu/couverture/${r.code}`)))}>
                         Couverture
                       </button>
@@ -87,6 +109,29 @@ export default function Referentiels() {
             {couverture.non_couvertes.length > 0 && <> Non couvertes : {couverture.non_couvertes.join(", ")}.</>}
           </div>
         )}
+      </div>
+
+      {detail && (
+        <div className="carte">
+          <div className="ligne espace">
+            <h2 style={{ marginTop: 0 }}>{detail.code} {detail.version}</h2>
+            <button className="lien" onClick={() => setDetail(null)}>Fermer</button>
+          </div>
+          <p>{detail.libelle}</p>
+          <p className="discret">
+            Niveaux : {detail.niveaux.join(" › ") || "—"}
+            {detail.profils.length > 0 && <> · profils : {detail.profils.join(", ")}</>}
+            {detail.source && <><br />Source : {detail.source}</>}
+            {detail.licence && <><br />Licence : {detail.licence}</>}
+          </p>
+          <ArbreReferentiel racines={detail.arbre} niveaux={detail.niveaux} profils={detail.profils} />
+        </div>
+      )}
+
+      <div className="carte">
+        <h2 style={{ marginTop: 0 }}>Charger un classeur Excel</h2>
+        <p className="discret">Référentiels de la bibliothèque, visibles dans toutes les missions. Un référentiel propre à un client se charge depuis sa mission.</p>
+        <Televersement url="/api/contenu/televerser" apres={refs.recharger} />
       </div>
 
       <div className="carte">

@@ -3,28 +3,27 @@
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import AdminDep, SessionDep, UtilisateurDep
 from app.config import reglages
+from app.contenu import arbre
 from app.contenu.couverture import couverture
-from app.contenu.importeur import importer_audit, importer_maturite
+from app.contenu.excel import TAILLE_MAX_OCTETS
+from app.contenu.importeur import importer_audit, importer_excel, importer_maturite
 from app.models import (
     NATURE_AUDIT,
-    Controle,
     Correspondance,
-    Exigence,
     Prestation,
     Question,
     QuestionProfil,
     Referentiel,
     Reglementation,
-    Section,
     SousTheme,
     Theme,
 )
@@ -44,6 +43,10 @@ class ReferentielSortie(BaseModel):
     importe_le: datetime
     empreinte: str
     avertissements: list[str]
+    niveaux: list[str] = []
+    profils: list[str] = []
+    niveau_socle: int = 1
+    mission_id: int | None = None
 
 
 class DemandeImport(BaseModel):
@@ -62,6 +65,7 @@ class ResultatImportSortie(BaseModel):
     erreurs: list[str]
     avertissements: list[str]
     stats: dict[str, int]
+    feuille: str = ""
 
 
 class ContenuDisponible(BaseModel):
@@ -74,7 +78,8 @@ class ContenuDisponible(BaseModel):
 
 @router.get("/referentiels", response_model=list[ReferentielSortie])
 def lister(u: UtilisateurDep, s: SessionDep, toutes_versions: bool = False) -> list[ReferentielSortie]:
-    req = select(Referentiel).order_by(Referentiel.code, Referentiel.importe_le.desc())
+    """Référentiels de la bibliothèque (ceux des clients sont listés dans leur mission)."""
+    req = select(Referentiel).where(Referentiel.mission_id.is_(None)).order_by(Referentiel.code, Referentiel.importe_le.desc())
     if not toutes_versions:
         req = req.where(Referentiel.actif.is_(True))
     return [ReferentielSortie.model_validate(r, from_attributes=True) for r in s.scalars(req)]
@@ -83,16 +88,47 @@ def lister(u: UtilisateurDep, s: SessionDep, toutes_versions: bool = False) -> l
 @router.get("/referentiels/{code}")
 def detail(code: str, u: UtilisateurDep, s: SessionDep, version: str | None = None) -> dict[str, Any]:
     """Contenu complet d'une version (la version active par défaut)."""
-    req = select(Referentiel).where(Referentiel.code == code)
+    req = select(Referentiel).where(Referentiel.code == code, Referentiel.mission_id.is_(None))
     req = req.where(Referentiel.version == version) if version else req.where(Referentiel.actif.is_(True))
     ref = s.scalar(req)
     if ref is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Référentiel introuvable.")
+    return contenu_referentiel(s, ref)
+
+
+def contenu_referentiel(s: Session, ref: Referentiel) -> dict[str, Any]:
     entete = ReferentielSortie.model_validate(ref, from_attributes=True).model_dump()
     corr = _correspondances_par_source(s, ref.id)
     if ref.nature == NATURE_AUDIT:
-        return {**entete, "sections": _arbre_audit(s, ref.id, corr)}
+        return {**entete, "arbre": [arbre.en_dict(n) for n in arbre.charger(s, ref).racines], "correspondances": corr}
     return {**entete, **_contenu_maturite(s, ref.id, corr)}
+
+
+async def lire_televersement(fichier: UploadFile) -> bytes:
+    """Contenu d'un classeur téléversé, taille et extension contrôlées."""
+    if not (fichier.filename or "").lower().endswith(".xlsx"):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Seuls les classeurs Excel (.xlsx) sont acceptés.")
+    contenu = await fichier.read(TAILLE_MAX_OCTETS + 1)
+    if len(contenu) > TAILLE_MAX_OCTETS:
+        raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, "Classeur trop volumineux (15 Mo au plus).")
+    return contenu
+
+
+@router.post("/televerser", response_model=list[ResultatImportSortie])
+async def televerser(
+    admin: AdminDep,
+    s: SessionDep,
+    fichier: Annotated[UploadFile, File()],
+    simulation: Annotated[bool, Form()] = False,
+    remplacer: Annotated[bool, Form()] = False,
+) -> list[ResultatImportSortie]:
+    """Charge dans la bibliothèque les référentiels d'un classeur Excel (une
+    feuille par référentiel, listées dans la feuille « Infos »)."""
+    contenu = await lire_televersement(fichier)
+    resultats = importer_excel(
+        s, contenu, fichier.filename or "classeur.xlsx", utilisateur_id=admin.id, simulation=simulation, remplacer=remplacer
+    )
+    return [ResultatImportSortie(**asdict(r)) for r in resultats]
 
 
 @router.get("/disponibles", response_model=list[ContenuDisponible])
@@ -154,38 +190,6 @@ def _correspondances_par_source(s: Session, referentiel_id: int) -> dict[str, li
             }
         )
     return resultat
-
-
-def _arbre_audit(s: Session, referentiel_id: int, corr: dict[str, list[dict[str, Any]]]) -> list[dict[str, Any]]:
-    sections = s.scalars(select(Section).where(Section.referentiel_id == referentiel_id).order_by(Section.ordre)).all()
-    exigences = s.scalars(select(Exigence).where(Exigence.referentiel_id == referentiel_id).order_by(Exigence.ordre)).all()
-    controles = s.scalars(select(Controle).where(Controle.referentiel_id == referentiel_id).order_by(Controle.ordre)).all()
-    par_exigence: dict[int, list[dict[str, Any]]] = {}
-    for c in controles:
-        par_exigence.setdefault(c.exigence_id, []).append(
-            {
-                "code": c.code,
-                "intitule": c.intitule,
-                "description": c.description,
-                "niveau": c.niveau,
-                "methode": c.methode,
-                "verification": c.verification,
-                "valeur_attendue": c.valeur_attendue,
-                "preuves_attendues": c.preuves_attendues,
-                "recommandation": c.recommandation,
-                "poids": c.poids,
-                "correspondances": corr.get(c.code, []),
-            }
-        )
-    par_section: dict[int, list[dict[str, Any]]] = {}
-    for e in exigences:
-        par_section.setdefault(e.section_id, []).append(
-            {"code": e.code, "libelle": e.libelle, "description": e.description, "controles": par_exigence.get(e.id, [])}
-        )
-    return [
-        {"code": sec.code, "libelle": sec.libelle, "description": sec.description, "exigences": par_section.get(sec.id, [])}
-        for sec in sections
-    ]
 
 
 def _contenu_maturite(s: Session, referentiel_id: int, corr: dict[str, list[dict[str, Any]]]) -> dict[str, Any]:

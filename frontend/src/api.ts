@@ -71,3 +71,24 @@ export const post = <T,>(chemin: string, corps: unknown = {}) => api<T>(chemin, 
 export const put = <T,>(chemin: string, corps: unknown) => api<T>(chemin, { methode: "PUT", corps });
 export const patch = <T,>(chemin: string, corps: unknown) => api<T>(chemin, { methode: "PATCH", corps });
 export const del = <T,>(chemin: string) => api<T>(chemin, { methode: "DELETE" });
+
+/** Envoie un fichier (formulaire multipart) avec des champs simples. */
+export async function televerser<T>(chemin: string, fichier: File, champs: Record<string, string | boolean> = {}): Promise<T> {
+  const formulaire = new FormData();
+  formulaire.append("fichier", fichier);
+  for (const [cle, valeur] of Object.entries(champs)) formulaire.append(cle, String(valeur));
+  const entetes: Record<string, string> = {};
+  const j = jeton();
+  if (j) entetes["Authorization"] = `Bearer ${j}`;
+  const reponse = await fetch(chemin, { method: "POST", headers: entetes, body: formulaire });
+  const texte = await reponse.text();
+  const corps = texte ? JSON.parse(texte) : null;
+  if (!reponse.ok) {
+    if (reponse.status === 401 && j) {
+      definirJeton(null);
+      surDeconnexion();
+    }
+    throw new ErreurApi(reponse.status, messages(corps, reponse.status));
+  }
+  return corps as T;
+}

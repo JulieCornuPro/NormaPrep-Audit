@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-MOTIF_CODE = re.compile(r"^[A-Za-z0-9_.-]+$")
+MOTIF_CODE = re.compile(r"^[A-Za-z0-9_./-]+$")
 
 PROFONDEURS = ("essentiel", "standard", "renforce")
 TYPES_QUESTION = ("niveaux", "fermee", "demonstration", "ouverte")
@@ -63,7 +63,7 @@ class Rapport:
             self.erreur(ou, f"Champ « {cle} » obligatoire.")
             return None
         if not MOTIF_CODE.match(c):
-            self.erreur(ou, f"« {c} » : seuls lettres, chiffres, « - », « _ » et « . » sont admis.")
+            self.erreur(ou, f"« {c} » : seuls lettres, chiffres, « - », « _ », « . » et « / » sont admis.")
             return None
         if len(c) > maximum:
             self.erreur(ou, f"« {c} » dépasse {maximum} caractères.")

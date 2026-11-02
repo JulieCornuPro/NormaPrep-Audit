@@ -82,7 +82,7 @@ export default function DiagnosticPage() {
 
       <nav className="onglets">
         <NavLink to={`${base}/profilage`}>1. Profilage</NavLink>
-        <NavLink to={`${base}/ateliers`}>2. Plan d'ateliers</NavLink>
+        <NavLink to={`${base}/ateliers`}>2. Plan d'entretiens</NavLink>
         <NavLink to={`${base}/questionnaire`}>3. Questionnaire</NavLink>
         <NavLink to={`${base}/pre-questionnaire`}>Pré-questionnaire</NavLink>
         <NavLink to={`${base}/resultats`}>4. Résultats</NavLink>

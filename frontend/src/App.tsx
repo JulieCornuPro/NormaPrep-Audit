@@ -5,6 +5,7 @@ import Connexion from "./pages/Connexion";
 import Missions from "./pages/Missions";
 import MissionPage from "./pages/Mission";
 import DiagnosticPage from "./pages/diagnostic/Diagnostic";
+import AnalysePage from "./pages/analyse/Analyse";
 import Utilisateurs from "./pages/admin/Utilisateurs";
 import Referentiels from "./pages/admin/Referentiels";
 import Journal from "./pages/admin/Journal";
@@ -40,6 +41,7 @@ function Application() {
           <Route path="/missions" element={<Missions />} />
           <Route path="/missions/:id" element={<MissionPage />} />
           <Route path="/diagnostics/:id/*" element={<DiagnosticPage />} />
+          <Route path="/analyses/:id/*" element={<AnalysePage />} />
           <Route path="/compte" element={<MonCompte />} />
           {moi.est_admin && (
             <>
