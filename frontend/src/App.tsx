@@ -1,4 +1,5 @@
-import { Link, Navigate, NavLink, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import Menu from "./composants/Menu";
 import { FournisseurSession, useSession } from "./session";
 import Connexion from "./pages/Connexion";
 import Missions from "./pages/Missions";
@@ -23,28 +24,15 @@ export default function App() {
 }
 
 function Application() {
-  const { moi, pret, deconnecter } = useSession();
+  const { moi, pret } = useSession();
   const lieu = useLocation();
   if (!pret) return null;
   if (!moi) return lieu.pathname === "/connexion" ? <Connexion /> : <Navigate to="/connexion" replace />;
 
   return (
-    <>
-      <header className="entete">
-        <Link to="/" className="marque">NormaPrep Audit</Link>
-        <nav>
-          <NavLink to="/missions">Missions</NavLink>
-          {moi.est_admin && (
-            <>
-              <NavLink to="/admin/utilisateurs">Utilisateurs</NavLink>
-              <NavLink to="/admin/referentiels">Référentiels</NavLink>
-              <NavLink to="/admin/journal">Journal</NavLink>
-            </>
-          )}
-        </nav>
-        <NavLink to="/compte" className="discret">{moi.nom}</NavLink>
-        <button onClick={deconnecter}>Se déconnecter</button>
-      </header>
+    <div className="coquille">
+      <Menu />
+      <div className="contenu">
       <main className="page">
         <Routes>
           <Route path="/" element={<Navigate to="/missions" replace />} />
@@ -63,6 +51,7 @@ function Application() {
           <Route path="*" element={<p>Page introuvable.</p>} />
         </Routes>
       </main>
-    </>
+      </div>
+    </div>
   );
 }

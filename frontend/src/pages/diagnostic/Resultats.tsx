@@ -1,7 +1,8 @@
+import type { CSSProperties } from "react";
 import { get } from "../../api";
 import { Chargement, Erreur, Pastille, useDonnees } from "../../composants/communs";
 import Radar from "../../composants/Radar";
-import { EFFORTS, nombre } from "../../libelles";
+import { couleurTheme, EFFORTS, nombre } from "../../libelles";
 import type { Resultats } from "../../types";
 import type { ContexteDiagnostic } from "./Diagnostic";
 
@@ -12,7 +13,7 @@ export default function ResultatsPage({ ctx }: { ctx: ContexteDiagnostic }) {
   if (r.erreur) return <Erreur erreur={r.erreur} />;
   if (!r.donnees) return <Chargement />;
   const res = r.donnees;
-  const axes = res.themes.flatMap((t) => t.sous_themes.filter((s) => s.score !== null));
+  const axes = res.themes.flatMap((t) => t.sous_themes.filter((s) => s.score !== null).map((s) => ({ ...s, couleur: couleurTheme(t.couleur) })));
 
   return (
     <>
@@ -31,7 +32,7 @@ export default function ResultatsPage({ ctx }: { ctx: ContexteDiagnostic }) {
             <tbody>
               {res.themes.map((t) => (
                 <tr key={t.code}>
-                  <td>{t.libelle}</td>
+                  <td><span className="pastille-theme" style={{ "--couleur-theme": couleurTheme(t.couleur) } as CSSProperties} />{t.libelle}</td>
                   <td className="nombre">{nombre(t.score)}</td>
                   <td className="nombre">{nombre(t.cible)}</td>
                   <td className="nombre">{t.ecart !== null ? <Pastille texte={nombre(t.ecart)} ton={tonEcart(t.ecart)} /> : "—"}</td>
@@ -63,7 +64,7 @@ export default function ResultatsPage({ ctx }: { ctx: ContexteDiagnostic }) {
             {res.themes.flatMap((t) =>
               t.sous_themes.map((s) => (
                 <tr key={s.code}>
-                  <td>{s.code} · {s.libelle}</td>
+                  <td><span className="pastille-theme" style={{ "--couleur-theme": couleurTheme(t.couleur) } as CSSProperties} />{s.code} · {s.libelle}</td>
                   <td className="nombre">{s.non_applicable ? "N/A" : nombre(s.score)}</td>
                   <td className="nombre">{nombre(s.cible)}</td>
                   <td className="nombre">{s.ecart !== null ? <Pastille texte={nombre(s.ecart)} ton={tonEcart(s.ecart)} /> : "—"}</td>

@@ -29,17 +29,22 @@ export default function PreQuestionnairePublic() {
 
   if (page.erreur) {
     return (
-      <div className="page-etroite">
-        <h1>Pré-questionnaire</h1>
-        <Erreur erreur={page.erreur} />
-      </div>
+      <>
+        <div className="bandeau-public">NormaPrep <span>Audit</span></div>
+        <div className="page-etroite">
+          <h1>Pré-questionnaire</h1>
+          <Erreur erreur={page.erreur} />
+        </div>
+      </>
     );
   }
-  if (!page.donnees) return <div className="page"><Chargement /></div>;
+  if (!page.donnees) return <div className="page-publique"><Chargement /></div>;
   const p = page.donnees;
 
   return (
-    <main className="page" style={{ maxWidth: 820 }}>
+    <>
+    <div className="bandeau-public">NormaPrep <span>Audit</span></div>
+    <main className="page-publique">
       <h1>Pré-questionnaire · {p.client}</h1>
       <p className="discret">{p.mission} · lien valable jusqu'au {date(p.expire_le)}</p>
       <div className="message info">
@@ -49,6 +54,7 @@ export default function PreQuestionnairePublic() {
       {p.questions.length === 0 && <p>Aucune question n'est en attente de réponse.</p>}
       {p.questions.map((q) => <Question key={q.ref} base={base} question={q} />)}
     </main>
+    </>
   );
 }
 
