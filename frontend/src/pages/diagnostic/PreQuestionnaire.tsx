@@ -32,7 +32,7 @@ export default function PreQuestionnaire({ ctx }: { ctx: ContexteDiagnostic }) {
         {!plan.donnees ? (
           <Chargement />
         ) : questions.length === 0 ? (
-          <p className="discret">Aucune question en pré-questionnaire. Dans l'onglet « Plan d'ateliers », passez des questions factuelles en mode « Pré-questionnaire ».</p>
+          <p className="discret">Aucune question en pré-questionnaire. Dans l'onglet « Plan d'entretiens », passez des questions factuelles en mode « Pré-questionnaire ».</p>
         ) : (
           <ul>{questions.map((q) => <li key={q.ref}>{q.ref} · {q.enonce}</li>)}</ul>
         )}

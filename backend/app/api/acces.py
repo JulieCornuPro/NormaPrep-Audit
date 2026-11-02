@@ -15,7 +15,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import ROLE_CONSULTANT, ROLE_RESPONSABLE, Diagnostic, MembreMission, Mission, Utilisateur
+from app.models import ROLE_CONSULTANT, ROLE_RESPONSABLE, AnalyseRisques, Diagnostic, MembreMission, Mission, Utilisateur
 
 LECTURE = "lecture"
 SAISIE = "saisie"
@@ -60,3 +60,14 @@ def diagnostic(s: Session, u: Utilisateur, diagnostic_id: int, droit: str = LECT
     if droit == SAISIE and d.statut == "finalise":
         raise HTTPException(status.HTTP_409_CONFLICT, "Diagnostic finalisé : rouvrez-le pour le modifier.")
     return d
+
+
+def analyse(s: Session, u: Utilisateur, analyse_id: int, droit: str = LECTURE) -> AnalyseRisques:
+
+    a = s.get(AnalyseRisques, analyse_id)
+    if a is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Analyse introuvable.")
+    mission(s, u, a.mission_id, droit)
+    if droit == SAISIE and a.statut == "finalise":
+        raise HTTPException(status.HTTP_409_CONFLICT, "Analyse finalisée : rouvrez-la pour la modifier.")
+    return a

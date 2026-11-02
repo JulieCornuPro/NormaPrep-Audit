@@ -27,7 +27,9 @@
           "profondeur": "essentiel",
           "cible": 2
         }
-      }
+      },
+      "referentiel": "ANSSI-HYG",
+      "profil": "Standard"
     },
     {
       "code": "NIS2-EE",
@@ -102,7 +104,9 @@
           "profondeur": "standard",
           "cible": 3
         }
-      }
+      },
+      "referentiel": "ANSSI-HYG",
+      "profil": "Renforcé"
     },
     {
       "code": "DORA",
@@ -140,7 +144,9 @@
           "profondeur": "renforce",
           "cible": 4
         }
-      }
+      },
+      "referentiel": "ANSSI-HYG",
+      "profil": "Renforcé"
     },
     {
       "code": "ISO27001",

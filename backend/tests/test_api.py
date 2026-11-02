@@ -118,10 +118,11 @@ def test_import_et_consultation_du_contenu(client, admin):
     assert r.json()["succes"], r.json()
 
     refs = client.get("/api/contenu/referentiels", headers=entetes).json()
-    assert {(x["code"], x["version"]) for x in refs} == {("ANSSI-HYG", "exemple-0.1"), ("NORMAPREP-MATURITE", "demo-0.2")}
+    assert {(x["code"], x["version"]) for x in refs} == {("ANSSI-HYG", "exemple-0.2"), ("NORMAPREP-MATURITE", "demo-0.3")}
 
     anssi = client.get("/api/contenu/referentiels/ANSSI-HYG", headers=entetes).json()
-    assert [s["code"] for s in anssi["sections"]][:2] == ["S01", "S02"]
+    assert [s["code"] for s in anssi["arbre"]][:2] == ["S01", "S02"]
+    assert anssi["niveaux"] == ["Section", "Exigence", "Contrôle"]
 
     mat = client.get("/api/contenu/referentiels/NORMAPREP-MATURITE", headers=entetes).json()
     i6 = next(st for t in mat["themes"] for st in t["sous_themes"] if st["code"] == "I6")

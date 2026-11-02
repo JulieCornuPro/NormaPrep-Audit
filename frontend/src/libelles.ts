@@ -19,7 +19,7 @@ export const INTERLOCUTEURS: Record<string, string> = {
 };
 
 export const MODES: Record<string, string> = {
-  atelier: "En atelier",
+  atelier: "En entretien",
   pre_questionnaire: "Pré-questionnaire",
   revue_documentaire: "Revue documentaire",
   import: "Import",
@@ -69,4 +69,23 @@ export const couleurTheme = (couleur: string | null | undefined): string => {
   if (couleur && /^--[a-z0-9-]+$/i.test(couleur)) return `var(${couleur})`;
   if (couleur && /^#[0-9a-f]{3,8}$/i.test(couleur)) return couleur;
   return "var(--accent)";
+};
+
+export const ETATS_SOCLE: Record<string, string> = {
+  applique: "Appliquée",
+  partiel: "Partiellement appliquée",
+  non_applique: "Non appliquée",
+  non_evalue: "Non évaluée",
+  non_applicable: "Non applicable",
+};
+
+export const IMPACTS: Record<string, string> = {
+  missions: "Missions et services",
+  humains: "Humains",
+  materiels: "Matériels",
+  gouvernance: "Gouvernance",
+  financiers: "Financiers",
+  juridiques: "Juridiques",
+  image: "Image et confiance",
+  environnementaux: "Environnementaux",
 };

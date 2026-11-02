@@ -29,7 +29,7 @@ def test_maturite_avant_le_pivot_est_refusee(session):
 def test_import_complet(session):
     res = importer_audit(session, ANSSI_EXEMPLE)
     assert res.succes, res.erreurs
-    assert res.stats == {"sections": 10, "exigences": 5, "controles": 4, "correspondances": 0}
+    assert res.stats == {"section": 10, "exigence": 5, "contrôle": 4, "noeuds": 19, "correspondances": 0}
 
     res = importer_maturite(session, DEMO_MATURITE)
     assert res.succes, res.erreurs
@@ -41,7 +41,7 @@ def test_import_complet(session):
     corr = session.scalar(select(Correspondance).where(Correspondance.source_code == "I6-Q01"))
     assert (corr.cible_referentiel, corr.cible_code, corr.seuil_applique, corr.seuil_partiel) == ("ANSSI-HYG", "37", 3, 1)
     p = session.scalar(select(Prestation).where(Prestation.code == "AUDIT-ANSSI"))
-    assert p.referentiel_audit == "ANSSI-HYG" and p.sections == ["S09"]
+    assert p.referentiel_audit == "ANSSI-HYG" and p.sections == ["37"]
     assert compter(session, EntreeJournal, EntreeJournal.action == "contenu_importe") == 2
 
 
@@ -64,11 +64,11 @@ def test_version_figee(session, tmp_path):
     assert any("Changez la version" in e for e in res.erreurs)
 
     # Nouvelle version : elle devient active, l'ancienne reste intacte.
-    d["version"] = "exemple-0.2"
+    d["version"] = "exemple-0.3"
     f.write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
     assert importer_audit(session, f).succes
     versions = {r.version: r.actif for r in session.scalars(select(Referentiel))}
-    assert versions == {"exemple-0.1": False, "exemple-0.2": True}
+    assert versions == {"exemple-0.2": False, "exemple-0.3": True}
 
 
 def test_remplacement_explicite(session, tmp_path):
@@ -121,8 +121,8 @@ def test_couverture(session):
     assert c["nb_exigences"] == 5
     assert c["nb_couvertes"] == 1
     assert c["non_couvertes"] == ["1", "4", "7", "34"]
-    m37 = next(e for s in c["sections"] for e in s["exigences"] if e["code"] == "37")
-    assert m37["sources"][0]["code"] == "I6-Q01"
+    m37 = next(e for e in c["elements"] if e["code"] == "37")
+    assert m37["sources"][0]["code"] == "I6-Q01" and m37["groupe"] == "Superviser, auditer, réagir"
     assert couverture(session, "INCONNU") is None
 
 

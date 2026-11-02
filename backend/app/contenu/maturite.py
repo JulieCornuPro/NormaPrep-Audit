@@ -428,6 +428,9 @@ class _Validateur:
                 "ordre": i + 1,
                 "regles": regles,
                 "exigences": exigences,
+                # Référentiel du socle de sécurité EBIOS RM appelé (facultatif).
+                "referentiel": (r.code(reg, "referentiel", ou, 50) if r.texte(reg, "referentiel") else None),
+                "profil": r.texte(reg, "profil") or None,
             }
 
     def _condition(self, c: Any, ou: str, modele: dict[str, Any]) -> None:

@@ -1,27 +1,32 @@
 """Couverture d'un référentiel pivot (cahier des charges, CNT-05).
 
-Pour chaque exigence et chaque contrôle de la version active du pivot : les
-éléments qui y sont reliés, parmi les versions actives des autres
-référentiels. Une exigence est couverte si elle-même ou l'un de ses contrôles
-reçoit au moins une correspondance.
+Pour chaque élément du niveau évalué dans le socle (la mesure, en général) de
+la version active du pivot : les questions et contrôles d'autres référentiels
+qui y sont reliés, parmi les versions actives. Un élément est couvert si
+lui-même ou l'un de ses descendants reçoit au moins une correspondance.
 """
 
 from typing import Any
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session
 
-from app.models import NATURE_AUDIT, Correspondance, Exigence, Referentiel, Section
+from app.contenu import arbre
+from app.models import NATURE_AUDIT, Correspondance, Referentiel
 
 
 def couverture(session: Session, code_pivot: str) -> dict[str, Any] | None:
     pivot = session.scalar(
-        select(Referentiel)
-        .where(Referentiel.code == code_pivot, Referentiel.actif.is_(True), Referentiel.nature == NATURE_AUDIT)
-        .options(selectinload(Referentiel.sections).selectinload(Section.exigences).selectinload(Exigence.controles))
+        select(Referentiel).where(
+            Referentiel.code == code_pivot,
+            Referentiel.actif.is_(True),
+            Referentiel.nature == NATURE_AUDIT,
+            Referentiel.mission_id.is_(None),
+        )
     )
     if pivot is None:
         return None
+    a = arbre.charger(session, pivot)
 
     lignes = session.execute(
         select(Correspondance, Referentiel.code, Referentiel.version)
@@ -37,31 +42,32 @@ def couverture(session: Session, code_pivot: str) -> dict[str, Any] | None:
                 "version": ref_version,
                 "type": corr.source_type,
                 "code": corr.source_code,
+                "cible": corr.cible_code,
                 "seuil_applique": corr.seuil_applique,
                 "seuil_partiel": corr.seuil_partiel,
             }
         )
 
-    sections = []
-    nb_exigences = nb_couvertes = 0
-    for s in pivot.sections:
-        exigences = []
-        for e in s.exigences:
-            controles = [{"code": c.code, "intitule": c.intitule, "sources": sources.get(c.code, [])} for c in e.controles]
-            directes = sources.get(e.code, [])
-            couverte = bool(directes) or any(c["sources"] for c in controles)
-            nb_exigences += 1
-            nb_couvertes += couverte
-            exigences.append(
-                {"code": e.code, "libelle": e.libelle, "couverte": couverte, "sources": directes, "controles": controles}
-            )
-        sections.append({"code": s.code, "libelle": s.libelle, "exigences": exigences})
-
+    elements = []
+    for n in a.au_niveau(pivot.niveau_socle):
+        trouvees = [s for x in [n, *n.descendants()] for s in sources.get(x.code, [])]
+        groupe = n.ancetre(0)
+        elements.append(
+            {
+                "code": n.code,
+                "libelle": n.libelle,
+                "groupe": groupe.libelle if groupe and groupe is not n else "",
+                "couverte": bool(trouvees),
+                "sources": trouvees,
+            }
+        )
+    niveau = pivot.niveaux[pivot.niveau_socle] if pivot.niveau_socle < len(pivot.niveaux) else ""
     return {
         "referentiel": pivot.code,
         "version": pivot.version,
-        "nb_exigences": nb_exigences,
-        "nb_couvertes": nb_couvertes,
-        "non_couvertes": [e["code"] for s in sections for e in s["exigences"] if not e["couverte"]],
-        "sections": sections,
+        "niveau": niveau,
+        "nb_exigences": len(elements),
+        "nb_couvertes": sum(e["couverte"] for e in elements),
+        "non_couvertes": [e["code"] for e in elements if not e["couverte"]],
+        "elements": elements,
     }

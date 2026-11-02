@@ -138,6 +138,21 @@ def importer(args: argparse.Namespace) -> int:
     return _afficher_import(res)
 
 
+def importer_excel(args: argparse.Namespace) -> int:
+    from app.contenu.importeur import importer_excel as importer_classeur
+
+    chemin = Path(args.chemin)
+    with _session() as s:
+        resultats = importer_classeur(s, chemin.read_bytes(), chemin.name, remplacer=args.remplacer, simulation=args.simulation)
+    code_retour = 0
+    for res in resultats:
+        print(f"--- Feuille « {res.feuille} »")
+        if args.simulation and res.succes:
+            print("Simulation : le contenu est valide, rien n'a été écrit.")
+        code_retour |= _afficher_import(res)
+    return code_retour
+
+
 def couverture(args: argparse.Namespace) -> int:
     from app.contenu.couverture import couverture as calculer
 
@@ -182,6 +197,12 @@ def main(argv: list[str] | None = None) -> int:
         )
         c.add_argument("--simulation", action="store_true", help="Valide sans rien écrire")
         c.set_defaults(fn=importer)
+
+    c = sous.add_parser("importer-excel", help="Importe les référentiels d'un classeur Excel (feuilles listées dans « Infos »)")
+    c.add_argument("chemin")
+    c.add_argument("--remplacer", action="store_true", help="Remplace une version déjà importée (si aucun audit ne l'utilise)")
+    c.add_argument("--simulation", action="store_true", help="Valide sans rien écrire")
+    c.set_defaults(fn=importer_excel)
 
     c = sous.add_parser("couverture", help="Couverture d'un référentiel pivot")
     c.add_argument("code")

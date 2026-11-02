@@ -22,22 +22,21 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.contenu import audit as validation_audit
+from app.contenu import excel as lecture_excel
 from app.contenu import maturite as validation_maturite
 from app.contenu.outils import Rapport
 from app.journal import journaliser
 from app.models import (
     NATURE_AUDIT,
     NATURE_MATURITE,
-    Controle,
     Correspondance,
-    Exigence,
+    Noeud,
     Prestation,
     Question,
     QuestionProfil,
     Recommandation,
     Referentiel,
     Reglementation,
-    Section,
     SousTheme,
     Theme,
 )
@@ -50,6 +49,7 @@ class ResultatImport:
     code: str = ""
     version: str = ""
     referentiel_id: int | None = None
+    feuille: str = ""
     erreurs: list[str] = field(default_factory=list)
     avertissements: list[str] = field(default_factory=list)
     stats: dict[str, int] = field(default_factory=dict)
@@ -72,6 +72,9 @@ def importer_maturite(
     return _importer(session, rapport, modele, NATURE_MATURITE, utilisateur_id, remplacer, simulation)
 
 
+ENTETE_AUDIT = ("code", "version", "libelle", "source", "licence", "empreinte", "niveaux", "profils", "niveau_socle")
+
+
 def importer_audit(
     session: Session,
     fichier: Path,
@@ -79,15 +82,36 @@ def importer_audit(
     utilisateur_id: int | None = None,
     remplacer: bool = False,
     simulation: bool = False,
+    mission_id: int | None = None,
 ) -> ResultatImport:
+    """Référentiel d'audit au format JSON (Section > Exigence > Contrôle)."""
     rapport, modele = validation_audit.analyser(fichier)
     if modele is not None:
-        # Même forme d'en-tête que pour la maturité.
-        modele = {
-            "referentiel": {k: modele[k] for k in ("code", "version", "libelle", "source", "licence", "empreinte")},
-            **modele,
-        }
-    return _importer(session, rapport, modele, NATURE_AUDIT, utilisateur_id, remplacer, simulation)
+        modele = {"referentiel": {k: modele[k] for k in ENTETE_AUDIT}, **modele}
+    return _importer(session, rapport, modele, NATURE_AUDIT, utilisateur_id, remplacer, simulation, mission_id)
+
+
+def importer_excel(
+    session: Session,
+    contenu: bytes,
+    nom_fichier: str,
+    *,
+    utilisateur_id: int | None = None,
+    remplacer: bool = False,
+    simulation: bool = False,
+    mission_id: int | None = None,
+) -> list[ResultatImport]:
+    """Classeur Excel : un référentiel par feuille listée dans « Infos ».
+    Chaque feuille est importée indépendamment (une feuille en erreur
+    n'empêche pas les autres)."""
+    resultats = []
+    for feuille, rapport, modele in lecture_excel.lire(contenu, nom_fichier):
+        if modele is not None:
+            modele = {"referentiel": {k: modele[k] for k in ENTETE_AUDIT}, **modele}
+        res = _importer(session, rapport, modele, NATURE_AUDIT, utilisateur_id, remplacer, simulation, mission_id)
+        res.feuille = feuille
+        resultats.append(res)
+    return resultats
 
 
 # ---------------------------------------------------------------------------
@@ -103,6 +127,7 @@ def _importer(
     utilisateur_id: int | None,
     remplacer: bool,
     simulation: bool,
+    mission_id: int | None = None,
 ) -> ResultatImport:
     res = ResultatImport(erreurs=list(rapport.erreurs), avertissements=list(rapport.avertissements))
     if modele is not None:
@@ -119,14 +144,15 @@ def _importer(
                 utilisateur_id=utilisateur_id,
                 objet_type="referentiel",
                 objet_id=f"{res.code}@{res.version}" if res.code else None,
-                details={"nature": nature, "erreurs": res.erreurs[:50], "nb_erreurs": len(res.erreurs)},
+                details={"nature": nature, "mission_id": mission_id, "erreurs": res.erreurs[:50], "nb_erreurs": len(res.erreurs)},
             )
             session.commit()
         return res
 
     entete = modele["referentiel"]
+    portee = Referentiel.mission_id.is_(None) if mission_id is None else Referentiel.mission_id == mission_id
     existant = session.scalar(
-        select(Referentiel).where(Referentiel.code == entete["code"], Referentiel.version == entete["version"])
+        select(Referentiel).where(Referentiel.code == entete["code"], Referentiel.version == entete["version"], portee)
     )
     if existant is not None:
         if existant.nature != nature:
@@ -145,7 +171,7 @@ def _importer(
             return res
 
     autre_nature = session.scalar(
-        select(Referentiel.nature).where(Referentiel.code == entete["code"], Referentiel.nature != nature).limit(1)
+        select(Referentiel.nature).where(Referentiel.code == entete["code"], Referentiel.nature != nature, portee).limit(1)
     )
     if autre_nature:
         res.erreurs.append(f"{entete['code']} — Ce code est déjà utilisé par un référentiel de nature « {autre_nature} ».")
@@ -174,6 +200,10 @@ def _importer(
             importe_par=utilisateur_id,
             avertissements=res.avertissements,
             actif=False,
+            mission_id=mission_id,
+            niveaux=entete.get("niveaux", []),
+            profils=entete.get("profils", []),
+            niveau_socle=entete.get("niveau_socle", 1),
         )
         session.add(ref)
         session.flush()
@@ -183,7 +213,9 @@ def _importer(
         else:
             res.stats = _ecrire_audit(session, ref, modele)
 
-        session.execute(update(Referentiel).where(Referentiel.code == ref.code, Referentiel.id != ref.id).values(actif=False))
+        session.execute(
+            update(Referentiel).where(Referentiel.code == ref.code, Referentiel.id != ref.id, portee).values(actif=False)
+        )
         ref.actif = True
 
         journaliser(
@@ -192,7 +224,7 @@ def _importer(
             utilisateur_id=utilisateur_id,
             objet_type="referentiel",
             objet_id=f"{ref.code}@{ref.version}",
-            details={"nature": nature, "remplacement": existant is not None, "stats": res.stats},
+            details={"nature": nature, "mission_id": mission_id, "remplacement": existant is not None, "stats": res.stats},
         )
         session.commit()
     except Exception:
@@ -209,21 +241,20 @@ def _importer(
 # ---------------------------------------------------------------------------
 
 
-def _codes_actifs(session: Session, code_referentiel: str) -> dict[str, set[str]] | None:
-    """Pour la version active d'un référentiel d'audit : codes de sections,
-    d'exigences et de contrôles. None si aucune version active."""
+def _codes_actifs(session: Session, code_referentiel: str) -> dict[str, Any] | None:
+    """Version active d'un référentiel d'audit de la bibliothèque : ses codes
+    d'éléments et ses profils. None si aucune version active."""
     ref = session.scalar(
         select(Referentiel).where(
-            Referentiel.code == code_referentiel, Referentiel.actif.is_(True), Referentiel.nature == NATURE_AUDIT
+            Referentiel.code == code_referentiel,
+            Referentiel.actif.is_(True),
+            Referentiel.nature == NATURE_AUDIT,
+            Referentiel.mission_id.is_(None),
         )
     )
     if ref is None:
         return None
-    return {
-        "sections": set(session.scalars(select(Section.code).where(Section.referentiel_id == ref.id))),
-        "cibles": set(session.scalars(select(Exigence.code).where(Exigence.referentiel_id == ref.id)))
-        | set(session.scalars(select(Controle.code).where(Controle.referentiel_id == ref.id))),
-    }
+    return {"cibles": set(session.scalars(select(Noeud.code).where(Noeud.referentiel_id == ref.id))), "profils": ref.profils}
 
 
 def _verifier_references_externes(session: Session, modele: dict[str, Any], nature: str, rapport: Rapport) -> None:
@@ -256,14 +287,30 @@ def _verifier_references_externes(session: Session, modele: dict[str, Any], natu
                 )
                 continue
             for s in p["sections"]:
-                if s not in cible["sections"]:
+                if s not in cible["cibles"]:
                     rapport.erreur(p["ou"], f"Section « {s} » inconnue dans {p['referentiel_audit']} (version active).")
+        # Référentiel du socle appelé par une réglementation : il peut être chargé
+        # plus tard, d'où un simple avertissement.
+        for reg in modele["reglementations"].values():
+            if not reg.get("referentiel"):
+                continue
+            cible = codes(reg["referentiel"])
+            ou = f"_reglementations.json › {reg['code']}"
+            if cible is None:
+                rapport.avertir(
+                    ou,
+                    f"Référentiel « {reg['referentiel']} » pas encore chargé : il ne pourra être proposé dans le socle qu'une fois chargé.",
+                )
+            elif reg.get("profil") and cible["profils"] and reg["profil"] not in cible["profils"]:
+                rapport.erreur(
+                    ou, f"Profil « {reg['profil']} » inconnu dans {reg['referentiel']} (profils : {', '.join(cible['profils'])})."
+                )
 
 
 def _toutes_correspondances(modele: dict[str, Any], nature: str) -> list[dict[str, Any]]:
     if nature == NATURE_MATURITE:
         return [c for st in modele["sous_themes"].values() for q in st["questions"].values() for c in q["correspondances"]]
-    return [c for s in modele["sections"] for e in s["exigences"] for ctl in e["controles"] for c in ctl["correspondances"]]
+    return [c for n in modele["noeuds"] for c in n["correspondances"]]
 
 
 # ---------------------------------------------------------------------------
@@ -403,6 +450,8 @@ def _ecrire_maturite(session: Session, ref: Referentiel, modele: dict[str, Any])
                 regles=list(r["regles"].values()),
                 exigences=r["exigences"],
                 ordre=r["ordre"],
+                referentiel_code=r.get("referentiel"),
+                referentiel_profil=r.get("profil"),
             )
         )
         stats["reglementations"] += 1
@@ -412,47 +461,36 @@ def _ecrire_maturite(session: Session, ref: Referentiel, modele: dict[str, Any])
 
 
 def _ecrire_audit(session: Session, ref: Referentiel, modele: dict[str, Any]) -> dict[str, int]:
-    stats = {"sections": 0, "exigences": 0, "controles": 0, "correspondances": 0}
-    for s in modele["sections"]:
-        section = Section(
-            referentiel_id=ref.id, code=s["code"], libelle=s["libelle"], description=s["description"], ordre=s["ordre"]
+    """Nœuds dans l'ordre du modèle (un parent précède toujours ses enfants)."""
+    ids: dict[str, int] = {}
+    stats = {"noeuds": 0, "correspondances": 0}
+    par_niveau: dict[str, int] = {}
+    for n in modele["noeuds"]:
+        noeud = Noeud(
+            referentiel_id=ref.id,
+            parent_id=ids[n["parent"]] if n["parent"] else None,
+            niveau=n["niveau"],
+            ordre=n["ordre"],
+            code=n["code"],
+            libelle=n["libelle"],
+            description=n.get("description", ""),
+            profils=n.get("profils", []),
+            methode=n.get("methode", ""),
+            verification=n.get("verification", ""),
+            valeur_attendue=n.get("valeur_attendue", ""),
+            preuves_attendues=n.get("preuves_attendues", []),
+            recommandation=n.get("recommandation", ""),
+            interlocuteurs=n.get("interlocuteurs", []),
+            poids=n.get("poids", 1.0),
         )
-        session.add(section)
+        session.add(noeud)
         session.flush()
-        stats["sections"] += 1
-        for e in s["exigences"]:
-            exigence = Exigence(
-                referentiel_id=ref.id,
-                section_id=section.id,
-                code=e["code"],
-                libelle=e["libelle"],
-                description=e["description"],
-                ordre=e["ordre"],
-            )
-            session.add(exigence)
-            session.flush()
-            stats["exigences"] += 1
-            for c in e["controles"]:
-                session.add(
-                    Controle(
-                        referentiel_id=ref.id,
-                        exigence_id=exigence.id,
-                        code=c["code"],
-                        intitule=c["intitule"],
-                        description=c["description"],
-                        niveau=c["niveau"],
-                        methode=c["methode"],
-                        verification=c["verification"],
-                        valeur_attendue=c["valeur_attendue"],
-                        preuves_attendues=c["preuves_attendues"],
-                        recommandation=c["recommandation"],
-                        poids=c["poids"],
-                        ordre=c["ordre"],
-                    )
-                )
-                stats["controles"] += 1
-                for corr in c["correspondances"]:
-                    session.add(_correspondance(ref, "controle", c["code"], corr))
-                    stats["correspondances"] += 1
+        ids[n["code"]] = noeud.id
+        stats["noeuds"] += 1
+        nom = (ref.niveaux[n["niveau"]] if n["niveau"] < len(ref.niveaux) else f"niveau {n['niveau']}").lower()
+        par_niveau[nom] = par_niveau.get(nom, 0) + 1
+        for corr in n.get("correspondances", []):
+            session.add(_correspondance(ref, "controle", n["code"], corr))
+            stats["correspondances"] += 1
     session.flush()
-    return stats
+    return {**par_niveau, **stats}
